@@ -126,6 +126,64 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 		case reflect.Uint:
 			ref := (*uint)(unsafe.Pointer(fv.UnsafeAddr()))
 			fs.UintVarP(ref, fieldname, shorthand, uint(fv.Uint()), helpText)
+		case reflect.Slice:
+			switch rf.Type.Elem().Kind() {
+			case reflect.Bool:
+				var defaultValue []bool
+				for i := 0; i < fv.Len(); i++ {
+					defaultValue = append(defaultValue, fv.Index(i).Bool())
+				}
+				ref := (*[]bool)(unsafe.Pointer(fv.UnsafeAddr()))
+				fs.BoolSliceVarP(ref, fieldname, shorthand, defaultValue, helpText)
+			case reflect.Float64:
+				var defaultValue []float64
+				for i := 0; i < fv.Len(); i++ {
+					defaultValue = append(defaultValue, fv.Index(i).Float())
+				}
+				ref := (*[]float64)(unsafe.Pointer(fv.UnsafeAddr()))
+				fs.Float64SliceVarP(ref, fieldname, shorthand, defaultValue, helpText)
+			case reflect.Int64:
+				switch rf.Type.Elem() {
+				case rTimeDuration:
+					ref := (*[]time.Duration)(unsafe.Pointer(fv.UnsafeAddr()))
+					var defaultValue []time.Duration
+					for i := 0; i < fv.Len(); i++ {
+						defaultValue = append(defaultValue, time.Duration(fv.Index(i).Int()))
+					}
+					fs.DurationSliceVarP(ref, fieldname, shorthand, defaultValue, helpText)
+				default:
+					var defaultValue []int64
+					for i := 0; i < fv.Len(); i++ {
+						defaultValue = append(defaultValue, fv.Index(i).Int())
+					}
+					ref := (*[]int64)(unsafe.Pointer(fv.UnsafeAddr()))
+					fs.Int64SliceVarP(ref, fieldname, shorthand, defaultValue, helpText)
+				}
+			case reflect.Int:
+				var defaultValue []int
+				for i := 0; i < fv.Len(); i++ {
+					defaultValue = append(defaultValue, int(fv.Index(i).Int()))
+				}
+				ref := (*[]int)(unsafe.Pointer(fv.UnsafeAddr()))
+				fs.IntSliceVarP(ref, fieldname, shorthand, defaultValue, helpText)
+			case reflect.String:
+				var defaultValue []string
+				for i := 0; i < fv.Len(); i++ {
+					defaultValue = append(defaultValue, fv.Index(i).String())
+				}
+				ref := (*[]string)(unsafe.Pointer(fv.UnsafeAddr()))
+				fs.StringSliceVarP(ref, fieldname, shorthand, defaultValue, helpText)
+			case reflect.Uint:
+				var defaultValue []uint
+				for i := 0; i < fv.Len(); i++ {
+					defaultValue = append(defaultValue, uint(fv.Index(i).Uint()))
+				}
+				ref := (*[]uint)(unsafe.Pointer(fv.UnsafeAddr()))
+				fs.UintSliceVarP(ref, fieldname, shorthand, defaultValue, helpText)
+			// case reflect.Uint64:
+			default:
+				panic(fmt.Sprintf("unsupported slice type %v", rf.Type))
+			}
 		default:
 			// TODO: map
 			panic(fmt.Sprintf("unsupported type %v", rf.Type))
