@@ -4,9 +4,9 @@ define flagset with struct and reflect
 
 ## features
 
-- define the flagset of flag (pflag) with struct definition
-- suport only single usecase (shorthand of flag package)
-- (default envvar support)
+- Builds pflag.FlagSet by struct definition
+- Supports only a single use case (shorthand of flag package)
+- (Default envvar support)
 
 ## install
 
