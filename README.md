@@ -68,7 +68,7 @@ $ hello -v --name bar
 parsed: &main.Options{Name:"name", Verbose:true}
 
 # envvar support
-$ X_NAME=bar hello -v --name bar
+$ X_NAME=bar hello -v
 parsed: &main.Options{Name:"bar", Verbose:true}
 ```
 
