@@ -32,7 +32,7 @@ func NewBuilder() *Builder {
 	name := os.Args[0]
 	b := &Builder{
 		Name:          name,
-		FlagnameTag:   "json",
+		FlagnameTag:   "flag",
 		ShorthandTag:  "short",
 		HelpTextTag:   "help",
 		EnvvarSupport: true,
