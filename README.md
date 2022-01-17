@@ -28,11 +28,12 @@ import (
 	"github.com/podhmo/structflag"
 )
 
+type Options struct {
+	Name    string `flag:"name" help:"name of greeting"`
+	Verbose bool   `flag:"verbose" short:"v"`
+}
+
 func main() {
-	type Options struct {
-		Name    string `flag:"name" help:"name of greeting"`
-		Verbose bool   `flag:"verbose" short:"v"`
-	}
 	options := &Options{Name: "foo"} // default value
 
 	b := structflag.NewBuilder()
@@ -43,6 +44,7 @@ func main() {
 	fs.Parse(os.Args[1:])
 
 	fmt.Printf("parsed: %#+v\n", options)
+
 }
 ```
 
