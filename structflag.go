@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 	"time"
 	"unsafe"
 
@@ -18,6 +19,10 @@ type Builder struct {
 	Name         string
 	HandlingMode flag.ErrorHandling
 
+	EnvvarSupport bool
+	EnvPrefix     string
+	EnvNameFunc   func(string) string
+
 	FlagnameTag  string
 	ShorthandTag string
 	HelpTextTag  string
@@ -26,11 +31,18 @@ type Builder struct {
 func NewBuilder() *Builder {
 	name := os.Args[0]
 	b := &Builder{
-		Name:         name,
-		FlagnameTag:  "json",
-		ShorthandTag: "short",
-		HelpTextTag:  "help",
-		HandlingMode: flag.ExitOnError,
+		Name:          name,
+		FlagnameTag:   "json",
+		ShorthandTag:  "short",
+		HelpTextTag:   "help",
+		EnvvarSupport: true,
+		HandlingMode:  flag.ExitOnError,
+	}
+	if v := os.Getenv("ENV_PREFIX"); v != "" {
+		b.EnvPrefix = v
+	}
+	b.EnvNameFunc = func(name string) string {
+		return b.EnvPrefix + strings.ReplaceAll(strings.ToUpper(name), "-", "_")
 	}
 	return b
 }
@@ -70,10 +82,15 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 		if v, ok := rf.Tag.Lookup(b.FlagnameTag); ok {
 			fieldname = v
 		}
+
 		helpText := "-"
 		if v, ok := rf.Tag.Lookup(b.HelpTextTag); ok {
 			helpText = v
 		}
+		if b.EnvvarSupport {
+			helpText = fmt.Sprintf("ENV: %s\t", b.EnvNameFunc(fieldname)) + helpText
+		}
+
 		shorthand := ""
 		if v, ok := rf.Tag.Lookup(b.ShorthandTag); ok {
 			shorthand = v
@@ -115,4 +132,18 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 		}
 	}
 	return &FlagSet{FlagSet: fs, builder: b}
+}
+
+func (fs *FlagSet) Parse(args []string) {
+	fs.FlagSet.Parse(args)
+	if fs.builder.EnvvarSupport {
+		fs.FlagSet.VisitAll(func(f *flag.Flag) {
+			envname := fs.builder.EnvNameFunc(f.Name)
+			if v := os.Getenv(envname); v != "" {
+				if err := fs.Set(f.Name, v); err != nil {
+					panic(fmt.Sprintf("on envvar %s=%v, %+v", envname, v, err))
+				}
+			}
+		})
+	}
 }
