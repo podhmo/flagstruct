@@ -11,4 +11,9 @@ GO ?= go
 	@echo ---
 	$(GO) run $(shell echo $@*/)main.go --verbose
 
+02:
+	$(GO) run $(shell echo $@*/)main.go --log-level DEBUG --log-level2 warn
+	@echo ---
+	$(GO) run $(shell echo $@*/)main.go --log-level foo --log-level2 foo
+
 	
