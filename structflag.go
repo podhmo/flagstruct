@@ -11,6 +11,10 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
+type HasHelpText interface {
+	HelpText() string
+}
+
 // TODO: nested
 // TODO: map
 // TODO: embed
@@ -84,6 +88,8 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 			continue
 		}
 
+		fv := rv.Field(i)
+
 		fieldname := rf.Name
 		if v, ok := rf.Tag.Lookup(b.FlagnameTag); ok {
 			fieldname = v
@@ -92,6 +98,8 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 		helpText := "-"
 		if v, ok := rf.Tag.Lookup(b.HelpTextTag); ok {
 			helpText = v
+		} else if impl, ok := fv.Interface().(HasHelpText); ok {
+			helpText = impl.HelpText()
 		}
 		if b.EnvvarSupport {
 			helpText = fmt.Sprintf("ENV: %s\t", b.EnvNameFunc(fieldname)) + helpText
@@ -101,8 +109,6 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 		if v, ok := rf.Tag.Lookup(b.ShorthandTag); ok {
 			shorthand = v
 		}
-
-		fv := rv.Field(i)
 
 		// for enum (TODO: skip check with cache)
 		{
