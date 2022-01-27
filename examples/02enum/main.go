@@ -9,6 +9,27 @@ import (
 	"github.com/podhmo/structflag"
 )
 
+type Options struct {
+	Name      string    `flag:"name" help:"name of greeting"`
+	LogLevel  LogLevel  `flag:"log-level"`
+	LogLevel2 *LogLevel `flag:"log-level2"`
+}
+
+func main() {
+	defaultLogLevel := LogLevelInfo
+	options := &Options{Name: "foo", LogLevel: defaultLogLevel, LogLevel2: &defaultLogLevel} // default value
+
+	b := structflag.NewBuilder()
+	b.Name = "hello"
+	b.EnvPrefix = "X_"
+
+	fs := b.Build(options)
+	fs.Parse(os.Args[1:])
+
+	fmt.Printf("parsed: %#+v\n", options)
+
+}
+
 type LogLevel string
 
 const (
@@ -52,25 +73,4 @@ func (v *LogLevel) Set(value string) error {
 // for pflag.Value
 func (v *LogLevel) Type() string {
 	return "LogLevel"
-}
-
-type Options struct {
-	Name      string    `flag:"name" help:"name of greeting"`
-	LogLevel  LogLevel  `flag:"log-level"`
-	LogLevel2 *LogLevel `flag:"log-level2"`
-}
-
-func main() {
-	defaultLogLevel := LogLevelInfo
-	options := &Options{Name: "foo", LogLevel: defaultLogLevel, LogLevel2: &defaultLogLevel} // default value
-
-	b := structflag.NewBuilder()
-	b.Name = "hello"
-	b.EnvPrefix = "X_"
-
-	fs := b.Build(options)
-	fs.Parse(os.Args[1:])
-
-	fmt.Printf("parsed: %#+v\n", options)
-
 }
