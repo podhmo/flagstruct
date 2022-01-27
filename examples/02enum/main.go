@@ -27,6 +27,11 @@ func (v LogLevel) Validate() error {
 	}
 }
 
+// for structflag.HasHelpText
+func (v *LogLevel) HelpText() string {
+	return "log level {DEBUG, INFO, WARN, ERROR}"
+}
+
 // for pflag.Value
 func (v *LogLevel) String() string {
 	if v == nil {
