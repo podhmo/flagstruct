@@ -53,8 +53,14 @@ type FlagSet struct {
 }
 
 var (
-	rTimeDuration = reflect.TypeOf(time.Second)
+	rTimeDurationType reflect.Type
+	rFlagValueType    reflect.Type
 )
+
+func init() {
+	rTimeDurationType = reflect.TypeOf(time.Second)
+	rFlagValueType = reflect.TypeOf(func() flag.Value { return nil }).Out(0)
+}
 
 func (b *Builder) Build(o interface{}) *FlagSet {
 	rt := reflect.TypeOf(o)
@@ -98,6 +104,29 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 
 		fv := rv.Field(i)
 
+		// for enum (TODO: skip check with cache)
+		{
+			fv := fv
+			ft := fv.Type()
+
+			// Set() is pointer receiver only
+			if ft.Kind() != reflect.Ptr {
+				fv = fv.Addr()
+				ft = reflect.PtrTo(ft)
+			}
+
+			if ft.Implements(rFlagValueType) {
+				rfn := reflect.ValueOf(fs.VarP)
+				rfn.Call([]reflect.Value{
+					fv,
+					reflect.ValueOf(fieldname),
+					reflect.ValueOf(shorthand),
+					reflect.ValueOf(helpText),
+				})
+				continue
+			}
+		}
+
 		switch rf.Type.Kind() {
 		case reflect.Bool:
 			ref := (*bool)(unsafe.Pointer(fv.UnsafeAddr()))
@@ -107,7 +136,7 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 			fs.Float64VarP(ref, fieldname, shorthand, fv.Float(), helpText)
 		case reflect.Int64:
 			switch rf.Type {
-			case rTimeDuration:
+			case rTimeDurationType:
 				ref := (*time.Duration)(unsafe.Pointer(fv.UnsafeAddr()))
 				fs.DurationVarP(ref, fieldname, shorthand, time.Duration(fv.Int()), helpText)
 			default:
@@ -144,7 +173,7 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 				fs.Float64SliceVarP(ref, fieldname, shorthand, defaultValue, helpText)
 			case reflect.Int64:
 				switch rf.Type.Elem() {
-				case rTimeDuration:
+				case rTimeDurationType:
 					ref := (*[]time.Duration)(unsafe.Pointer(fv.UnsafeAddr()))
 					var defaultValue []time.Duration
 					for i := 0; i < fv.Len(); i++ {
