@@ -109,7 +109,6 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 		if v, ok := rf.Tag.Lookup(b.ShorthandTag); ok {
 			shorthand = v
 		}
-
 		// for enum (TODO: skip check with cache)
 		{
 			fv := fv
@@ -227,8 +226,11 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 	return &FlagSet{FlagSet: fs, builder: b}
 }
 
-func (fs *FlagSet) Parse(args []string) {
-	fs.FlagSet.Parse(args)
+func (fs *FlagSet) Parse(args []string) error {
+	err := fs.FlagSet.Parse(args)
+	if err != nil {
+		return err
+	}
 	if fs.builder.EnvvarSupport {
 		fs.FlagSet.VisitAll(func(f *flag.Flag) {
 			envname := fs.builder.EnvNameFunc(f.Name)
@@ -239,4 +241,5 @@ func (fs *FlagSet) Parse(args []string) {
 			}
 		})
 	}
+	return nil
 }
