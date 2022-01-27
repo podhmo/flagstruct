@@ -48,7 +48,7 @@ func TestBuilder_Build(t *testing.T) {
 		create func() (*structflag.Builder, interface{})
 	}{
 		{
-			name: "string",
+			name: "types--string",
 			args: []string{"--name", "foo"},
 			want: `{"Name":"foo"}`,
 			create: func() (*structflag.Builder, interface{}) {
@@ -59,13 +59,56 @@ func TestBuilder_Build(t *testing.T) {
 			},
 		},
 		{
-			name: "options",
-			args: []string{"--long", "foo", "-s", "bar"},
-			want: `{"Long":"foo", "Short": "bar"}`,
+			name: "types--int",
+			args: []string{"--age", "20"},
+			want: `{"Age":20}`,
 			create: func() (*structflag.Builder, interface{}) {
 				type Options struct {
-					Long  string `flag:"long"`
-					Short string `flag:"short" short:"s"`
+					Age int `flag:"age"`
+				}
+				return newBuilder(), &Options{}
+			},
+		},
+		{
+			name: "options--long",
+			args: []string{"--verbose"},
+			want: `{"Verbose":true}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Options struct {
+					Verbose bool `flag:"verbose"`
+				}
+				return newBuilder(), &Options{}
+			},
+		},
+		{
+			name: "options--short",
+			args: []string{"-v"},
+			want: `{"Verbose":true}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Options struct {
+					Verbose bool `flag:"verbose" short:"v"`
+				}
+				return newBuilder(), &Options{}
+			},
+		},
+		{
+			name: "options--short-only",
+			args: []string{"-v"},
+			want: `{"Verbose":true}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Options struct {
+					Verbose bool `short:"v"`
+				}
+				return newBuilder(), &Options{}
+			},
+		},
+		{
+			name: "options--nothing",
+			args: []string{"--Verbose"},
+			want: `{"Verbose":true}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Options struct {
+					Verbose bool
 				}
 				return newBuilder(), &Options{}
 			},
