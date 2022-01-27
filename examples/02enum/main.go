@@ -61,7 +61,8 @@ type Options struct {
 }
 
 func main() {
-	options := &Options{Name: "foo", LogLevel: LogLevelInfo} // default value
+	defaultLogLevel := LogLevelInfo
+	options := &Options{Name: "foo", LogLevel: defaultLogLevel, LogLevel2: &defaultLogLevel} // default value
 
 	b := structflag.NewBuilder()
 	b.Name = "hello"
