@@ -176,6 +176,11 @@ func (b *Builder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value,
 	}
 
 	switch rt.Kind() {
+	case reflect.Ptr:
+		if fv.IsNil() && fv.CanAddr() {
+			fv.Set(reflect.New(rt.Elem()))
+		}
+		b.walkField(fs, rt.Elem(), fv.Elem(), c)
 	case reflect.Struct:
 		b.walk(fs, rt, fv, c.prefix+c.fieldname+".")
 	case reflect.Bool:
