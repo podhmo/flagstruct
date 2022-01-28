@@ -84,25 +84,35 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 
 	for i := 0; i < rt.NumField(); i++ {
 		rf := rt.Field(i)
-		if !rf.IsExported() {
-			continue
-		}
-
 		fv := rv.Field(i)
 
 		fieldname := rf.Name
 		if v, ok := rf.Tag.Lookup(b.FlagnameTag); ok {
+			if v == "-" {
+				continue
+			}
+
 			if strings.Contains(v, ",") {
 				v = strings.TrimSpace(strings.SplitN(v, ",", 2)[0]) // e.g. json's omitempty
 			}
 			fieldname = v
+		} else {
+			if !rf.IsExported() {
+				continue
+			}
 		}
 
 		helpText := "-"
 		if v, ok := rf.Tag.Lookup(b.HelpTextTag); ok {
 			helpText = v
-		} else if impl, ok := fv.Interface().(HasHelpText); ok {
-			helpText = impl.HelpText()
+		} else {
+			// for enum, for custom help message
+			if fv.CanInterface() {
+				impl, ok := fv.Interface().(HasHelpText)
+				if ok {
+					helpText = impl.HelpText()
+				}
+			}
 		}
 		if b.EnvvarSupport {
 			helpText = fmt.Sprintf("ENV: %s\t", b.EnvNameFunc(fieldname)) + helpText
