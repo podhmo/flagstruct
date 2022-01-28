@@ -84,10 +84,6 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 
 	for i := 0; i < rt.NumField(); i++ {
 		rf := rt.Field(i)
-		if !rf.IsExported() {
-			continue
-		}
-
 		fv := rv.Field(i)
 
 		fieldname := rf.Name
@@ -96,6 +92,10 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 				v = strings.TrimSpace(strings.SplitN(v, ",", 2)[0]) // e.g. json's omitempty
 			}
 			fieldname = v
+		} else {
+			if !rf.IsExported() {
+				continue
+			}
 		}
 
 		helpText := "-"
