@@ -82,6 +82,17 @@ func TestBuilder_Build(t *testing.T) {
 			},
 		},
 		{
+			name: "types--int-slice",
+			args: []string{"-n", "20", "-n", "30"},
+			want: `{"Nums": [20, 30]}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Options struct {
+					Nums []int `flag:"nums" short:"n"`
+				}
+				return newBuilder(), &Options{}
+			},
+		},
+		{
 			name: "options--long",
 			args: []string{"--verbose"},
 			want: `{"Verbose":true}`,
