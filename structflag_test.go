@@ -136,6 +136,19 @@ func TestBuilder_Build(t *testing.T) {
 				return newBuilder(), &Options{}
 			},
 		},
+		{
+			name: "lookup--tag--json",
+			args: []string{"--verbose"},
+			want: `{"verbose":true}`, // serialized by encoding/json
+			create: func() (*structflag.Builder, interface{}) {
+				type Options struct {
+					Verbose bool `json:"verbose"` // not flag
+				}
+				b := newBuilder()
+				b.FlagnameTag = "json"
+				return b, &Options{}
+			},
+		},
 	}
 
 	for _, tt := range tests {
