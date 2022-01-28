@@ -154,6 +154,17 @@ func TestBuilder_Build(t *testing.T) {
 			errorString: "unknown flag: --name",
 		},
 		{
+			name: "skip--unexported,tag,not-skipped",
+			args: []string{"--name", "foo"},
+			want: `{}`, // normalized by json, so unexported field is not included.
+			create: func() (*structflag.Builder, interface{}) {
+				type Options struct {
+					name string `flag:"name"`
+				}
+				return newBuilder(), &Options{}
+			},
+		},
+		{
 			name: "lookup--tag--json",
 			args: []string{"--verbose"},
 			want: `{"verbose":true}`, // serialized by encoding/json
@@ -218,6 +229,7 @@ func TestBuilder_Build(t *testing.T) {
 
 			got := normalize(t, options)
 			want := normalizeString(t, tt.want)
+			t.Logf("parsed: %+#v", options)
 
 			if got != want {
 				t.Errorf("Builder.Build() = %v, want %v\nargs = %s", got, want, tt.args)
