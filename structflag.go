@@ -89,7 +89,11 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 		name = rt.Name()
 	}
 	fs := flag.NewFlagSet(name, b.HandlingMode)
+	b.walk(fs, rt, rv, "")
+	return &FlagSet{FlagSet: fs, builder: b}
+}
 
+func (b *Builder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, prefix string) {
 	for i := 0; i < rt.NumField(); i++ {
 		rf := rt.Field(i)
 		fv := rv.Field(i)
@@ -99,11 +103,12 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 			if v == "-" {
 				continue
 			}
-			fieldname = b.FlagNameFunc(v)
+			fieldname = b.FlagNameFunc(prefix + v)
 		} else {
 			if !rf.IsExported() {
 				continue
 			}
+			fieldname = b.FlagNameFunc(prefix + fieldname)
 		}
 
 		helpText := "-"
@@ -124,123 +129,144 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 
 		shorthand := ""
 		if v, ok := rf.Tag.Lookup(b.ShorthandTag); ok {
-			shorthand = v
-		}
-		// for enum (TODO: skip check with cache)
-		{
-			fv := fv
-			ft := fv.Type()
-
-			// Set() is pointer receiver only
-			if ft.Kind() != reflect.Ptr {
-				fv = fv.Addr()
-				ft = reflect.PtrTo(ft)
-			}
-
-			if ft.Implements(rFlagValueType) {
-				rfn := reflect.ValueOf(fs.VarP)
-				rfn.Call([]reflect.Value{
-					fv,
-					reflect.ValueOf(fieldname),
-					reflect.ValueOf(shorthand),
-					reflect.ValueOf(helpText),
-				})
-				continue
+			if prefix == "" {
+				shorthand = v
 			}
 		}
 
-		switch rf.Type.Kind() {
-		case reflect.Bool:
-			ref := (*bool)(unsafe.Pointer(fv.UnsafeAddr()))
-			fs.BoolVarP(ref, fieldname, shorthand, fv.Bool(), helpText)
-		case reflect.Float64:
-			ref := (*float64)(unsafe.Pointer(fv.UnsafeAddr()))
-			fs.Float64VarP(ref, fieldname, shorthand, fv.Float(), helpText)
-		case reflect.Int64:
-			switch rf.Type {
-			case rTimeDurationType:
-				ref := (*time.Duration)(unsafe.Pointer(fv.UnsafeAddr()))
-				fs.DurationVarP(ref, fieldname, shorthand, time.Duration(fv.Int()), helpText)
-			default:
-				ref := (*int64)(unsafe.Pointer(fv.UnsafeAddr()))
-				fs.Int64VarP(ref, fieldname, shorthand, fv.Int(), helpText)
-			}
-		case reflect.Int:
-			ref := (*int)(unsafe.Pointer(fv.UnsafeAddr()))
-			fs.IntVarP(ref, fieldname, shorthand, int(fv.Int()), helpText)
-		case reflect.String:
-			ref := (*string)(unsafe.Pointer(fv.UnsafeAddr()))
-			fs.StringVarP(ref, fieldname, shorthand, fv.String(), helpText)
-		case reflect.Uint64:
-			ref := (*uint64)(unsafe.Pointer(fv.UnsafeAddr()))
-			fs.Uint64VarP(ref, fieldname, shorthand, fv.Uint(), helpText)
-		case reflect.Uint:
-			ref := (*uint)(unsafe.Pointer(fv.UnsafeAddr()))
-			fs.UintVarP(ref, fieldname, shorthand, uint(fv.Uint()), helpText)
-		case reflect.Slice:
-			switch rf.Type.Elem().Kind() {
-			case reflect.Bool:
-				var defaultValue []bool
-				for i := 0; i < fv.Len(); i++ {
-					defaultValue = append(defaultValue, fv.Index(i).Bool())
-				}
-				ref := (*[]bool)(unsafe.Pointer(fv.UnsafeAddr()))
-				fs.BoolSliceVarP(ref, fieldname, shorthand, defaultValue, helpText)
-			case reflect.Float64:
-				var defaultValue []float64
-				for i := 0; i < fv.Len(); i++ {
-					defaultValue = append(defaultValue, fv.Index(i).Float())
-				}
-				ref := (*[]float64)(unsafe.Pointer(fv.UnsafeAddr()))
-				fs.Float64SliceVarP(ref, fieldname, shorthand, defaultValue, helpText)
-			case reflect.Int64:
-				switch rf.Type.Elem() {
-				case rTimeDurationType:
-					ref := (*[]time.Duration)(unsafe.Pointer(fv.UnsafeAddr()))
-					var defaultValue []time.Duration
-					for i := 0; i < fv.Len(); i++ {
-						defaultValue = append(defaultValue, time.Duration(fv.Index(i).Int()))
-					}
-					fs.DurationSliceVarP(ref, fieldname, shorthand, defaultValue, helpText)
-				default:
-					var defaultValue []int64
-					for i := 0; i < fv.Len(); i++ {
-						defaultValue = append(defaultValue, fv.Index(i).Int())
-					}
-					ref := (*[]int64)(unsafe.Pointer(fv.UnsafeAddr()))
-					fs.Int64SliceVarP(ref, fieldname, shorthand, defaultValue, helpText)
-				}
-			case reflect.Int:
-				var defaultValue []int
-				for i := 0; i < fv.Len(); i++ {
-					defaultValue = append(defaultValue, int(fv.Index(i).Int()))
-				}
-				ref := (*[]int)(unsafe.Pointer(fv.UnsafeAddr()))
-				fs.IntSliceVarP(ref, fieldname, shorthand, defaultValue, helpText)
-			case reflect.String:
-				var defaultValue []string
-				for i := 0; i < fv.Len(); i++ {
-					defaultValue = append(defaultValue, fv.Index(i).String())
-				}
-				ref := (*[]string)(unsafe.Pointer(fv.UnsafeAddr()))
-				fs.StringSliceVarP(ref, fieldname, shorthand, defaultValue, helpText)
-			case reflect.Uint:
-				var defaultValue []uint
-				for i := 0; i < fv.Len(); i++ {
-					defaultValue = append(defaultValue, uint(fv.Index(i).Uint()))
-				}
-				ref := (*[]uint)(unsafe.Pointer(fv.UnsafeAddr()))
-				fs.UintSliceVarP(ref, fieldname, shorthand, defaultValue, helpText)
-			// case reflect.Uint64:
-			default:
-				panic(fmt.Sprintf("unsupported slice type %v", rf.Type))
-			}
-		default:
-			// TODO: map
-			panic(fmt.Sprintf("unsupported type %v", rf.Type))
+		b.walkField(fs, rf.Type, fv, fieldcontext{
+			fieldname: fieldname,
+			helpText:  helpText,
+			shorthand: shorthand,
+			prefix:    prefix,
+		})
+	}
+}
+
+type fieldcontext struct {
+	fieldname string
+	helpText  string
+	shorthand string
+
+	prefix string
+}
+
+func (b *Builder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, c fieldcontext) {
+	// for enum (TODO: skip check with cache)
+	{
+		fv := fv
+		ft := fv.Type()
+
+		// Set() is pointer receiver only
+		if ft.Kind() != reflect.Ptr {
+			fv = fv.Addr()
+			ft = reflect.PtrTo(ft)
+		}
+
+		if ft.Implements(rFlagValueType) {
+			rfn := reflect.ValueOf(fs.VarP)
+			rfn.Call([]reflect.Value{
+				fv,
+				reflect.ValueOf(c.fieldname),
+				reflect.ValueOf(c.shorthand),
+				reflect.ValueOf(c.helpText),
+			})
+			return
 		}
 	}
-	return &FlagSet{FlagSet: fs, builder: b}
+
+	switch rt.Kind() {
+	case reflect.Struct:
+		b.walk(fs, rt, fv, c.prefix+c.fieldname+".")
+	case reflect.Bool:
+		ref := (*bool)(unsafe.Pointer(fv.UnsafeAddr()))
+		fs.BoolVarP(ref, c.fieldname, c.shorthand, fv.Bool(), c.helpText)
+	case reflect.Float64:
+		ref := (*float64)(unsafe.Pointer(fv.UnsafeAddr()))
+		fs.Float64VarP(ref, c.fieldname, c.shorthand, fv.Float(), c.helpText)
+	case reflect.Int64:
+		switch rt {
+		case rTimeDurationType:
+			ref := (*time.Duration)(unsafe.Pointer(fv.UnsafeAddr()))
+			fs.DurationVarP(ref, c.fieldname, c.shorthand, time.Duration(fv.Int()), c.helpText)
+		default:
+			ref := (*int64)(unsafe.Pointer(fv.UnsafeAddr()))
+			fs.Int64VarP(ref, c.fieldname, c.shorthand, fv.Int(), c.helpText)
+		}
+	case reflect.Int:
+		ref := (*int)(unsafe.Pointer(fv.UnsafeAddr()))
+		fs.IntVarP(ref, c.fieldname, c.shorthand, int(fv.Int()), c.helpText)
+	case reflect.String:
+		ref := (*string)(unsafe.Pointer(fv.UnsafeAddr()))
+		fs.StringVarP(ref, c.fieldname, c.shorthand, fv.String(), c.helpText)
+	case reflect.Uint64:
+		ref := (*uint64)(unsafe.Pointer(fv.UnsafeAddr()))
+		fs.Uint64VarP(ref, c.fieldname, c.shorthand, fv.Uint(), c.helpText)
+	case reflect.Uint:
+		ref := (*uint)(unsafe.Pointer(fv.UnsafeAddr()))
+		fs.UintVarP(ref, c.fieldname, c.shorthand, uint(fv.Uint()), c.helpText)
+	case reflect.Slice:
+		switch rt.Elem().Kind() {
+		case reflect.Bool:
+			var defaultValue []bool
+			for i := 0; i < fv.Len(); i++ {
+				defaultValue = append(defaultValue, fv.Index(i).Bool())
+			}
+			ref := (*[]bool)(unsafe.Pointer(fv.UnsafeAddr()))
+			fs.BoolSliceVarP(ref, c.fieldname, c.shorthand, defaultValue, c.helpText)
+		case reflect.Float64:
+			var defaultValue []float64
+			for i := 0; i < fv.Len(); i++ {
+				defaultValue = append(defaultValue, fv.Index(i).Float())
+			}
+			ref := (*[]float64)(unsafe.Pointer(fv.UnsafeAddr()))
+			fs.Float64SliceVarP(ref, c.fieldname, c.shorthand, defaultValue, c.helpText)
+		case reflect.Int64:
+			switch rt.Elem() {
+			case rTimeDurationType:
+				ref := (*[]time.Duration)(unsafe.Pointer(fv.UnsafeAddr()))
+				var defaultValue []time.Duration
+				for i := 0; i < fv.Len(); i++ {
+					defaultValue = append(defaultValue, time.Duration(fv.Index(i).Int()))
+				}
+				fs.DurationSliceVarP(ref, c.fieldname, c.shorthand, defaultValue, c.helpText)
+			default:
+				var defaultValue []int64
+				for i := 0; i < fv.Len(); i++ {
+					defaultValue = append(defaultValue, fv.Index(i).Int())
+				}
+				ref := (*[]int64)(unsafe.Pointer(fv.UnsafeAddr()))
+				fs.Int64SliceVarP(ref, c.fieldname, c.shorthand, defaultValue, c.helpText)
+			}
+		case reflect.Int:
+			var defaultValue []int
+			for i := 0; i < fv.Len(); i++ {
+				defaultValue = append(defaultValue, int(fv.Index(i).Int()))
+			}
+			ref := (*[]int)(unsafe.Pointer(fv.UnsafeAddr()))
+			fs.IntSliceVarP(ref, c.fieldname, c.shorthand, defaultValue, c.helpText)
+		case reflect.String:
+			var defaultValue []string
+			for i := 0; i < fv.Len(); i++ {
+				defaultValue = append(defaultValue, fv.Index(i).String())
+			}
+			ref := (*[]string)(unsafe.Pointer(fv.UnsafeAddr()))
+			fs.StringSliceVarP(ref, c.fieldname, c.shorthand, defaultValue, c.helpText)
+		case reflect.Uint:
+			var defaultValue []uint
+			for i := 0; i < fv.Len(); i++ {
+				defaultValue = append(defaultValue, uint(fv.Index(i).Uint()))
+			}
+			ref := (*[]uint)(unsafe.Pointer(fv.UnsafeAddr()))
+			fs.UintSliceVarP(ref, c.fieldname, c.shorthand, defaultValue, c.helpText)
+		// case reflect.Uint64:
+		default:
+			panic(fmt.Sprintf("unsupported slice type %v", rt))
+		}
+	default:
+		// TODO: map
+		panic(fmt.Sprintf("unsupported type %v", rt))
+	}
 }
 
 func (fs *FlagSet) Parse(args []string) error {
