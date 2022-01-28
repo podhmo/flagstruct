@@ -64,6 +64,17 @@ func TestBuilder_Build(t *testing.T) {
 			},
 		},
 		{
+			name: "types--string-pointer",
+			args: []string{"--name", "foo"},
+			want: `{"Name":"foo"}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Options struct {
+					Name *string `flag:"name"`
+				}
+				return newBuilder(), &Options{}
+			},
+		},
+		{
 			name: "types--string,default",
 			args: []string{"--name2", "bar"},
 			want: `{"Name":"foo", "Name2":"bar"}`,
@@ -220,7 +231,7 @@ func TestBuilder_Build(t *testing.T) {
 		{
 			name: "nested",
 			args: []string{"--father.name", "foo"},
-			want: `{"Father": {"Name": "foo"}, "Mother": {"Name": ""}}`,
+			want: `{"Father": {"Name": "foo"}, "Mother": {"Name": "moo"}, "Zero": {"Name": ""}}`,
 			create: func() (*structflag.Builder, interface{}) {
 				type Person struct {
 					Name string `flag:"name"`
@@ -228,11 +239,46 @@ func TestBuilder_Build(t *testing.T) {
 				type Options struct {
 					Father Person `flag:"father"`
 					Mother Person `flag:"mother"`
+					Zero   Person `flag:"zero"`
 				}
 				b := newBuilder()
-				return b, &Options{}
+				return b, &Options{Mother: Person{Name: "moo"}}
 			},
 		},
+		{
+			name: "nested,pointer",
+			args: []string{"--father.name", "foo"},
+			want: `{"Father": {"Name": "foo"}, "Mother": {"Name": "moo"}, "Zero": {"Name": ""}}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Person struct {
+					Name string `flag:"name"`
+				}
+				type Options struct {
+					Father *Person `flag:"father"`
+					Mother *Person `flag:"mother"`
+					Zero   *Person `flag:"zero"`
+				}
+				b := newBuilder()
+				return b, &Options{Mother: &Person{Name: "moo"}}
+			},
+		},
+
+		// MEMO: []struct[T] is impossible. maybe.
+		// {
+		// 	name: "nested,slice",
+		// 	args: []string{"--people.name", "foo"},
+		// 	want: `{"People": [{"Name": "moo"}, {"Name": "foo"}]}`,
+		// 	create: func() (*structflag.Builder, interface{}) {
+		// 		type Person struct {
+		// 			Name string `flag:"name"`
+		// 		}
+		// 		type Options struct {
+		// 			People []Person `flag:"people"`
+		// 		}
+		// 		b := newBuilder()
+		// 		return b, &Options{People: []Person{{Name: "moo"}}}
+		// 	},
+		// },
 	}
 
 	for _, tt := range tests {
