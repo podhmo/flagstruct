@@ -101,8 +101,14 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 		helpText := "-"
 		if v, ok := rf.Tag.Lookup(b.HelpTextTag); ok {
 			helpText = v
-		} else if impl, ok := fv.Interface().(HasHelpText); ok {
-			helpText = impl.HelpText()
+		} else {
+			// for enum, for custom help message
+			if fv.CanInterface() {
+				impl, ok := fv.Interface().(HasHelpText)
+				if ok {
+					helpText = impl.HelpText()
+				}
+			}
 		}
 		if b.EnvvarSupport {
 			helpText = fmt.Sprintf("ENV: %s\t", b.EnvNameFunc(fieldname)) + helpText
