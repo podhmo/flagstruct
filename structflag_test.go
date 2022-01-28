@@ -153,6 +153,19 @@ func TestBuilder_Build(t *testing.T) {
 			},
 		},
 		{
+			name: "lookup--tag--json,omitempty",
+			args: []string{"--verbose"},
+			want: `{"verbose":true}`, // serialized by encoding/json
+			create: func() (*structflag.Builder, interface{}) {
+				type Options struct {
+					Verbose bool `json:"verbose,omitempty"` // not flag
+				}
+				b := newBuilder()
+				b.FlagnameTag = "json"
+				return b, &Options{}
+			},
+		},
+		{
 			name: "customize--enum",
 			args: []string{"--log-level", "info"},
 			want: `{"LogLevel":"INFO", "LogLevelDefault": "WARN", "LogLevelPointer": "WARN"}`,
