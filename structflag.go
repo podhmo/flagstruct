@@ -88,6 +88,10 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 
 		fieldname := rf.Name
 		if v, ok := rf.Tag.Lookup(b.FlagnameTag); ok {
+			if v == "-" {
+				continue
+			}
+
 			if strings.Contains(v, ",") {
 				v = strings.TrimSpace(strings.SplitN(v, ",", 2)[0]) // e.g. json's omitempty
 			}

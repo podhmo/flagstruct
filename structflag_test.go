@@ -142,6 +142,18 @@ func TestBuilder_Build(t *testing.T) {
 			},
 		},
 		{
+			name: "skip--exported,tag",
+			args: []string{"--name", "foo"},
+			want: `{"name":"foo"}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Options struct {
+					Name string `flag:"-"`
+				}
+				return newBuilder(), &Options{}
+			},
+			errorString: "unknown flag: --name",
+		},
+		{
 			name: "skip--unexported",
 			args: []string{"--name", "foo"},
 			want: `{"name":"foo"}`,
