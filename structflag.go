@@ -89,7 +89,11 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 		name = rt.Name()
 	}
 	fs := flag.NewFlagSet(name, b.HandlingMode)
+	b.walk(fs, rt, rv)
+	return &FlagSet{FlagSet: fs, builder: b}
+}
 
+func (b *Builder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value) {
 	for i := 0; i < rt.NumField(); i++ {
 		rf := rt.Field(i)
 		fv := rv.Field(i)
@@ -240,7 +244,6 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 			panic(fmt.Sprintf("unsupported type %v", rf.Type))
 		}
 	}
-	return &FlagSet{FlagSet: fs, builder: b}
 }
 
 func (fs *FlagSet) Parse(args []string) error {
