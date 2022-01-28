@@ -49,6 +49,8 @@ func TestBuilder_Build(t *testing.T) {
 		args   []string
 		want   string
 		create func() (*structflag.Builder, interface{})
+
+		errorString string
 	}{
 		{
 			name: "types--string",
@@ -140,6 +142,18 @@ func TestBuilder_Build(t *testing.T) {
 			},
 		},
 		{
+			name: "skip--unexported",
+			args: []string{"--name", "foo"},
+			want: `{"name":"foo"}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Options struct {
+					name string
+				}
+				return newBuilder(), &Options{}
+			},
+			errorString: "unknown flag: --name",
+		},
+		{
 			name: "lookup--tag--json",
 			args: []string{"--verbose"},
 			want: `{"verbose":true}`, // serialized by encoding/json
@@ -187,8 +201,19 @@ func TestBuilder_Build(t *testing.T) {
 			b, options := tt.create()
 			fs := b.Build(options)
 
-			if err := fs.Parse(tt.args); err != nil {
-				t.Fatalf("parse error: %+v with (%v)", err, tt.args) // TODO: help message
+			err := fs.Parse(tt.args)
+			if tt.errorString == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %+v with (%v)", err, tt.args) // TODO: help message
+				}
+			} else {
+				if err == nil {
+					t.Fatalf("must be error, but nil")
+				}
+				if tt.errorString != err.Error() {
+					t.Fatalf("unexpected error: %+q\n\tbut expected message is %q", err.Error(), tt.errorString)
+				}
+				return
 			}
 
 			got := normalize(t, options)
