@@ -2,6 +2,9 @@ package structflag_test
 
 import (
 	"encoding/json"
+	"fmt"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/podhmo/structflag"
@@ -149,6 +152,21 @@ func TestBuilder_Build(t *testing.T) {
 				return b, &Options{}
 			},
 		},
+		{
+			name: "customize--enum",
+			args: []string{"--log-level", "info"},
+			want: `{"LogLevel":"INFO", "LogLevelDefault": "WARN", "LogLevelPointer": "WARN"}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Options struct {
+					LogLevel        LogLevel  `flag:"log-level"`
+					LogLevelDefault LogLevel  `flag:"log-level-default"`
+					LogLevelPointer *LogLevel `flag:"log-level-pointer"`
+				}
+				b := newBuilder()
+				logDefault := LogLevelWarning
+				return b, &Options{LogLevel: logDefault, LogLevelDefault: logDefault, LogLevelPointer: &logDefault}
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -168,4 +186,51 @@ func TestBuilder_Build(t *testing.T) {
 			}
 		})
 	}
+}
+
+// test for enum
+
+type LogLevel string
+
+const (
+	LogLevelDebug   LogLevel = "DEBUG"
+	LogLevelInfo    LogLevel = "INFO"
+	LogLevelWarning LogLevel = "WARN"
+	LogLevelError   LogLevel = "ERROR"
+)
+
+func (v LogLevel) Validate() error {
+	switch v {
+	case "DEBUG", "INFO", "WARN", "ERROR":
+		return nil
+	default:
+		return fmt.Errorf("%v is an invalid value for %v", v, reflect.TypeOf(v))
+	}
+}
+
+// for structflag.HasHelpText
+func (v LogLevel) HelpText() string {
+	return "log level {DEBUG, INFO, WARN, ERROR}"
+}
+
+// for pflag.Value
+func (v *LogLevel) String() string {
+	if v == nil {
+		return "<nil>"
+	}
+	return string(*v)
+}
+
+// for pflag.Value
+func (v *LogLevel) Set(value string) error {
+	if v == nil {
+		return fmt.Errorf("nil is invalid for %v", reflect.TypeOf(v))
+	}
+	*v = LogLevel(strings.ToUpper(value))
+	return v.Validate()
+}
+
+// for pflag.Value
+func (v *LogLevel) Type() string {
+	return "LogLevel"
 }
