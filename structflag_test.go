@@ -262,6 +262,23 @@ func TestBuilder_Build(t *testing.T) {
 				return b, &Options{Mother: &Person{Name: "moo"}}
 			},
 		},
+
+		// MEMO: []struct[T] is impossible. maybe.
+		// {
+		// 	name: "nested,slice",
+		// 	args: []string{"--people.name", "foo"},
+		// 	want: `{"People": [{"Name": "moo"}, {"Name": "foo"}]}`,
+		// 	create: func() (*structflag.Builder, interface{}) {
+		// 		type Person struct {
+		// 			Name string `flag:"name"`
+		// 		}
+		// 		type Options struct {
+		// 			People []Person `flag:"people"`
+		// 		}
+		// 		b := newBuilder()
+		// 		return b, &Options{People: []Person{{Name: "moo"}}}
+		// 	},
+		// },
 	}
 
 	for _, tt := range tests {
