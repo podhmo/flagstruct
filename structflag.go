@@ -89,11 +89,11 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 		name = rt.Name()
 	}
 	fs := flag.NewFlagSet(name, b.HandlingMode)
-	b.walk(fs, rt, rv)
+	b.walk(fs, rt, rv, "")
 	return &FlagSet{FlagSet: fs, builder: b}
 }
 
-func (b *Builder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value) {
+func (b *Builder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, prefix string) {
 	for i := 0; i < rt.NumField(); i++ {
 		rf := rt.Field(i)
 		fv := rv.Field(i)
@@ -103,11 +103,12 @@ func (b *Builder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value) {
 			if v == "-" {
 				continue
 			}
-			fieldname = b.FlagNameFunc(v)
+			fieldname = b.FlagNameFunc(prefix + v)
 		} else {
 			if !rf.IsExported() {
 				continue
 			}
+			fieldname = b.FlagNameFunc(prefix + fieldname)
 		}
 
 		helpText := "-"
@@ -128,13 +129,16 @@ func (b *Builder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value) {
 
 		shorthand := ""
 		if v, ok := rf.Tag.Lookup(b.ShorthandTag); ok {
-			shorthand = v
+			if prefix == "" {
+				shorthand = v
+			}
 		}
 
 		b.walkField(fs, rf.Type, fv, fieldcontext{
 			fieldname: fieldname,
 			helpText:  helpText,
 			shorthand: shorthand,
+			prefix:    prefix,
 		})
 	}
 }
@@ -143,6 +147,8 @@ type fieldcontext struct {
 	fieldname string
 	helpText  string
 	shorthand string
+
+	prefix string
 }
 
 func (b *Builder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, c fieldcontext) {
@@ -170,6 +176,8 @@ func (b *Builder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value,
 	}
 
 	switch rt.Kind() {
+	case reflect.Struct:
+		b.walk(fs, rt, fv, c.prefix+c.fieldname+".")
 	case reflect.Bool:
 		ref := (*bool)(unsafe.Pointer(fv.UnsafeAddr()))
 		fs.BoolVarP(ref, c.fieldname, c.shorthand, fv.Bool(), c.helpText)
