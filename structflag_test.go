@@ -217,6 +217,22 @@ func TestBuilder_Build(t *testing.T) {
 				return b, &Options{LogLevel: logDefault, LogLevelDefault: logDefault, LogLevelPointer: &logDefault}
 			},
 		},
+		{
+			name: "nested",
+			args: []string{"--father.name", "foo"},
+			want: `{"Father": {"Name": "foo"}, "Mother": {"Name": ""}}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Person struct {
+					Name string `flag:"name"`
+				}
+				type Options struct {
+					Father Person `flag:"father"`
+					Mother Person `flag:"mother"`
+				}
+				b := newBuilder()
+				return b, &Options{}
+			},
+		},
 	}
 
 	for _, tt := range tests {
