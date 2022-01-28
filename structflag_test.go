@@ -231,7 +231,7 @@ func TestBuilder_Build(t *testing.T) {
 		{
 			name: "nested",
 			args: []string{"--father.name", "foo"},
-			want: `{"Father": {"Name": "foo"}, "Mother": {"Name": ""}}`,
+			want: `{"Father": {"Name": "foo"}, "Mother": {"Name": "moo"}}`,
 			create: func() (*structflag.Builder, interface{}) {
 				type Person struct {
 					Name string `flag:"name"`
@@ -241,7 +241,23 @@ func TestBuilder_Build(t *testing.T) {
 					Mother Person `flag:"mother"`
 				}
 				b := newBuilder()
-				return b, &Options{}
+				return b, &Options{Mother: Person{Name: "moo"}}
+			},
+		},
+		{
+			name: "nested,pointer",
+			args: []string{"--father.name", "foo"},
+			want: `{"Father": {"Name": "foo"}, "Mother": {"Name": "moo"}}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Person struct {
+					Name string `flag:"name"`
+				}
+				type Options struct {
+					Father *Person `flag:"father"`
+					Mother *Person `flag:"mother"`
+				}
+				b := newBuilder()
+				return b, &Options{Mother: &Person{Name: "moo"}}
 			},
 		},
 	}
