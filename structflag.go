@@ -28,6 +28,8 @@ type Builder struct {
 	EnvNameFunc   func(string) string
 
 	FlagnameTag  string
+	FlagNameFunc func(string) string
+
 	ShorthandTag string
 	HelpTextTag  string
 }
@@ -47,6 +49,12 @@ func NewBuilder() *Builder {
 	}
 	b.EnvNameFunc = func(name string) string {
 		return b.EnvPrefix + strings.ReplaceAll(strings.ToUpper(name), "-", "_")
+	}
+	b.FlagNameFunc = func(v string) string {
+		if strings.Contains(v, ",") {
+			return strings.TrimSpace(strings.SplitN(v, ",", 2)[0]) // e.g. json's omitempty
+		}
+		return v
 	}
 	return b
 }
@@ -91,11 +99,7 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 			if v == "-" {
 				continue
 			}
-
-			if strings.Contains(v, ",") {
-				v = strings.TrimSpace(strings.SplitN(v, ",", 2)[0]) // e.g. json's omitempty
-			}
-			fieldname = v
+			fieldname = b.FlagNameFunc(v)
 		} else {
 			if !rf.IsExported() {
 				continue
