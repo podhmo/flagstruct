@@ -64,6 +64,17 @@ func TestBuilder_Build(t *testing.T) {
 			},
 		},
 		{
+			name: "types--string-pointer",
+			args: []string{"--name", "foo"},
+			want: `{"Name":"foo"}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Options struct {
+					Name *string `flag:"name"`
+				}
+				return newBuilder(), &Options{}
+			},
+		},
+		{
 			name: "types--string,default",
 			args: []string{"--name2", "bar"},
 			want: `{"Name":"foo", "Name2":"bar"}`,
