@@ -48,7 +48,7 @@ func NewBuilder() *Builder {
 		b.EnvPrefix = v
 	}
 	b.EnvNameFunc = func(name string) string {
-		return b.EnvPrefix + strings.ReplaceAll(strings.ToUpper(name), "-", "_")
+		return b.EnvPrefix + strings.ReplaceAll(strings.ReplaceAll(strings.ToUpper(name), "-", "_"), ".", "_")
 	}
 	b.FlagNameFunc = func(v string) string {
 		if strings.Contains(v, ",") {
