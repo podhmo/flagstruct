@@ -99,11 +99,13 @@ func (b *Builder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, pref
 		fv := rv.Field(i)
 
 		fieldname := rf.Name
+		hasFlagname := false
 		if v, ok := rf.Tag.Lookup(b.FlagnameTag); ok {
 			if v == "-" {
 				continue
 			}
 			fieldname = b.FlagNameFunc(prefix + v)
+			hasFlagname = true
 		} else {
 			if !rf.IsExported() {
 				continue
@@ -135,10 +137,11 @@ func (b *Builder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, pref
 		}
 
 		b.walkField(fs, rf.Type, fv, fieldcontext{
-			fieldname: fieldname,
-			helpText:  helpText,
-			shorthand: shorthand,
-			prefix:    prefix,
+			fieldname:   fieldname,
+			helpText:    helpText,
+			shorthand:   shorthand,
+			prefix:      prefix,
+			hasFlagname: hasFlagname,
 		})
 	}
 }
@@ -148,7 +151,8 @@ type fieldcontext struct {
 	helpText  string
 	shorthand string
 
-	prefix string
+	prefix      string
+	hasFlagname bool
 }
 
 func (b *Builder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, c fieldcontext) {
@@ -178,6 +182,10 @@ func (b *Builder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value,
 	switch rt.Kind() {
 	case reflect.Ptr:
 		if fv.IsNil() && fv.CanAddr() {
+			// flagname is not found, will be skipped (even if the field is a pointer, with field tag, it will be treated as a flag forcely).
+			if !c.hasFlagname {
+				return
+			}
 			fv.Set(reflect.New(rt.Elem()))
 		}
 		b.walkField(fs, rt.Elem(), fv.Elem(), c)
