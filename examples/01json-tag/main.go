@@ -8,8 +8,10 @@ import (
 )
 
 type Options struct {
-	Name    string `json:"name"`
-	Verbose bool   `json:"verbose" short:"v"`
+	Name        string `json:"name"`
+	Verbose     bool   `json:"verbose" short:"v"`
+	Ignored     bool   `json:"ignored" flag:"-"`
+	AnotherName string `json:"anotherName" flag:"another-name"`
 }
 
 func main() {

@@ -14,8 +14,8 @@ type DBConfig struct {
 }
 
 type Options struct {
-	DB        DBConfig `flag:"db"`
-	AnotherDB DBConfig `flag:"another-db"`
+	DB        DBConfig `flag:"db"`         // add --db.uri, --db.debug
+	AnotherDB DBConfig `flag:"another-db"` // add --another-db.uri, --another-db.debug
 }
 
 func main() {
