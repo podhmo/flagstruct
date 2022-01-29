@@ -18,7 +18,7 @@ func main() {
 	b := structflag.NewBuilder()
 	b.Name = "hello"
 	b.EnvPrefix = "X_"
-	b.FlagnameTag = "json"
+	b.FlagnameTags = append(b.FlagnameTags, "json")
 
 	fs := b.Build(options)
 	fs.Parse(os.Args[1:])
