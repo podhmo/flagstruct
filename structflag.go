@@ -27,7 +27,7 @@ type Builder struct {
 	EnvPrefix     string
 	EnvNameFunc   func(string) string
 
-	FlagnameTag  string
+	FlagnameTags []string
 	FlagNameFunc func(string) string
 
 	ShorthandTag string
@@ -38,7 +38,7 @@ func NewBuilder() *Builder {
 	name := os.Args[0]
 	b := &Builder{
 		Name:          name,
-		FlagnameTag:   "flag",
+		FlagnameTags:  []string{"flag"},
 		ShorthandTag:  "short",
 		HelpTextTag:   "help",
 		EnvvarSupport: true,
@@ -99,13 +99,19 @@ func (b *Builder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, pref
 		fv := rv.Field(i)
 
 		fieldname := rf.Name
-		if v, ok := rf.Tag.Lookup(b.FlagnameTag); ok {
-			if v == "-" {
+		hasFlagname := false
+
+		{
+			for j := len(b.FlagnameTags) - 1; j >= 0; j-- {
+				if v, ok := rf.Tag.Lookup(b.FlagnameTags[j]); ok {
+					fieldname = v
+					hasFlagname = true
+				}
+			}
+			if fieldname == "-" {
 				continue
 			}
-			fieldname = b.FlagNameFunc(prefix + v)
-		} else {
-			if !rf.IsExported() {
+			if !hasFlagname && !rf.IsExported() {
 				continue
 			}
 			fieldname = b.FlagNameFunc(prefix + fieldname)
@@ -135,10 +141,11 @@ func (b *Builder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, pref
 		}
 
 		b.walkField(fs, rf.Type, fv, fieldcontext{
-			fieldname: fieldname,
-			helpText:  helpText,
-			shorthand: shorthand,
-			prefix:    prefix,
+			fieldname:   fieldname,
+			helpText:    helpText,
+			shorthand:   shorthand,
+			prefix:      prefix,
+			hasFlagname: hasFlagname,
 		})
 	}
 }
@@ -148,7 +155,8 @@ type fieldcontext struct {
 	helpText  string
 	shorthand string
 
-	prefix string
+	prefix      string
+	hasFlagname bool
 }
 
 func (b *Builder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, c fieldcontext) {
@@ -178,6 +186,10 @@ func (b *Builder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value,
 	switch rt.Kind() {
 	case reflect.Ptr:
 		if fv.IsNil() && fv.CanAddr() {
+			// flagname is not found, will be skipped (even if the field is a pointer, with field tag, it will be treated as a flag forcely).
+			if !c.hasFlagname {
+				return
+			}
 			fv.Set(reflect.New(rt.Elem()))
 		}
 		b.walkField(fs, rt.Elem(), fv.Elem(), c)
