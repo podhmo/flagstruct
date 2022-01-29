@@ -188,6 +188,29 @@ func TestBuilder_Build(t *testing.T) {
 			},
 		},
 		{
+			name: "skip--pointer",
+			args: []string{"--name", "foo"},
+			want: `{"Name":"foo"}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Options struct {
+					Name *string
+				}
+				return newBuilder(), &Options{}
+			},
+			errorString: "unknown flag: --name",
+		},
+		{
+			name: "skip--pointer,tag,not-skipped",
+			args: []string{"--name", "foo"},
+			want: `{"Name":"foo"}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Options struct {
+					Name *string `flag:"name"`
+				}
+				return newBuilder(), &Options{}
+			},
+		},
+		{
 			name: "lookup--tag--json",
 			args: []string{"--verbose"},
 			want: `{"verbose":true}`, // serialized by encoding/json
