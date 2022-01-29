@@ -27,7 +27,7 @@ type Builder struct {
 	EnvPrefix     string
 	EnvNameFunc   func(string) string
 
-	FlagnameTag  string
+	FlagnameTags []string
 	FlagNameFunc func(string) string
 
 	ShorthandTag string
@@ -38,7 +38,7 @@ func NewBuilder() *Builder {
 	name := os.Args[0]
 	b := &Builder{
 		Name:          name,
-		FlagnameTag:   "flag",
+		FlagnameTags:  []string{"flag"},
 		ShorthandTag:  "short",
 		HelpTextTag:   "help",
 		EnvvarSupport: true,
@@ -100,14 +100,18 @@ func (b *Builder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, pref
 
 		fieldname := rf.Name
 		hasFlagname := false
-		if v, ok := rf.Tag.Lookup(b.FlagnameTag); ok {
-			if v == "-" {
+
+		{
+			for j := len(b.FlagnameTags) - 1; j >= 0; j-- {
+				if v, ok := rf.Tag.Lookup(b.FlagnameTags[j]); ok {
+					fieldname = v
+					hasFlagname = true
+				}
+			}
+			if fieldname == "-" {
 				continue
 			}
-			fieldname = b.FlagNameFunc(prefix + v)
-			hasFlagname = true
-		} else {
-			if !rf.IsExported() {
+			if !hasFlagname && !rf.IsExported() {
 				continue
 			}
 			fieldname = b.FlagNameFunc(prefix + fieldname)
