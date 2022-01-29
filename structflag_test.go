@@ -285,6 +285,39 @@ func TestBuilder_Build(t *testing.T) {
 				return b, &Options{Mother: &Person{Name: "moo"}}
 			},
 		},
+		{
+			name: "nested,pointer,with-json",
+			args: []string{"--zero.name", "foo"},
+			want: `{"zero": {"name": "foo"}}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Person struct {
+					Name string `json:"name"`
+				}
+				type Options struct {
+					Zero *Person `json:"zero"`
+				}
+				b := newBuilder()
+				b.FlagnameTags = append(b.FlagnameTags, "json")
+				return b, &Options{}
+			},
+		},
+		{
+			name: "nested,pointer,with-json,override",
+			args: []string{"--zero.name", "foo"},
+			want: `{}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Person struct {
+					Name string `json:"name"`
+				}
+				type Options struct {
+					Zero *Person `json:"zero" flag:"-"`
+				}
+				b := newBuilder()
+				b.FlagnameTags = append(b.FlagnameTags, "json")
+				return b, &Options{}
+			},
+			errorString: "unknown flag: --zero.name",
+		},
 
 		// MEMO: []struct[T] is impossible. maybe.
 		// {
