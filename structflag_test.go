@@ -15,7 +15,7 @@ func TestBuilder_Build(t *testing.T) {
 	newBuilder := func() *structflag.Builder {
 		b := structflag.NewBuilder()
 		b.Name = "-"
-		b.FlagnameTag = "flag"
+		b.FlagnameTags = []string{"flag"}
 		b.ShorthandTag = "short"
 		b.EnvvarSupport = false
 		b.HandlingMode = pflag.ContinueOnError
@@ -188,6 +188,29 @@ func TestBuilder_Build(t *testing.T) {
 			},
 		},
 		{
+			name: "skip--pointer",
+			args: []string{"--name", "foo"},
+			want: `{"Name":"foo"}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Options struct {
+					Name *string
+				}
+				return newBuilder(), &Options{}
+			},
+			errorString: "unknown flag: --name",
+		},
+		{
+			name: "skip--pointer,tag,not-skipped",
+			args: []string{"--name", "foo"},
+			want: `{"Name":"foo"}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Options struct {
+					Name *string `flag:"name"`
+				}
+				return newBuilder(), &Options{}
+			},
+		},
+		{
 			name: "lookup--tag--json",
 			args: []string{"--verbose"},
 			want: `{"verbose":true}`, // serialized by encoding/json
@@ -196,7 +219,7 @@ func TestBuilder_Build(t *testing.T) {
 					Verbose bool `json:"verbose"` // not flag
 				}
 				b := newBuilder()
-				b.FlagnameTag = "json"
+				b.FlagnameTags = append(b.FlagnameTags, "json")
 				return b, &Options{}
 			},
 		},
@@ -209,7 +232,7 @@ func TestBuilder_Build(t *testing.T) {
 					Verbose bool `json:"verbose,omitempty"` // not flag
 				}
 				b := newBuilder()
-				b.FlagnameTag = "json"
+				b.FlagnameTags = append(b.FlagnameTags, "json")
 				return b, &Options{}
 			},
 		},
@@ -261,6 +284,39 @@ func TestBuilder_Build(t *testing.T) {
 				b := newBuilder()
 				return b, &Options{Mother: &Person{Name: "moo"}}
 			},
+		},
+		{
+			name: "nested,pointer,with-json",
+			args: []string{"--zero.name", "foo"},
+			want: `{"zero": {"name": "foo"}}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Person struct {
+					Name string `json:"name"`
+				}
+				type Options struct {
+					Zero *Person `json:"zero"`
+				}
+				b := newBuilder()
+				b.FlagnameTags = append(b.FlagnameTags, "json")
+				return b, &Options{}
+			},
+		},
+		{
+			name: "nested,pointer,with-json,override",
+			args: []string{"--zero.name", "foo"},
+			want: `{}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Person struct {
+					Name string `json:"name"`
+				}
+				type Options struct {
+					Zero *Person `json:"zero" flag:"-"`
+				}
+				b := newBuilder()
+				b.FlagnameTags = append(b.FlagnameTags, "json")
+				return b, &Options{}
+			},
+			errorString: "unknown flag: --zero.name",
 		},
 
 		// MEMO: []struct[T] is impossible. maybe.

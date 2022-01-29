@@ -1,5 +1,5 @@
 --- 00hello/main.go	2022-01-17 15:46:27.620110890 +0900
-+++ 01json-tag/main.go	2022-01-27 10:36:42.767087049 +0900
++++ 01json-tag/main.go	2022-01-29 13:37:34.528688891 +0900
 @@ -8,8 +8,8 @@
  )
  
@@ -15,7 +15,7 @@
  	b := structflag.NewBuilder()
  	b.Name = "hello"
  	b.EnvPrefix = "X_"
-+	b.FlagnameTag = "json"
++	b.FlagnameTags = append(b.FlagnameTags, "json")
  
  	fs := b.Build(options)
  	fs.Parse(os.Args[1:])
