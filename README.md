@@ -6,7 +6,8 @@ define flagset with struct and reflect
 
 - Builds pflag.FlagSet by struct definition
 - Supports only a single use case (shorthand of flag package)
-- (Default envvar support)
+- Nested structure support ([example](./examples/03nested/main.go))
+- Default envvar support
 
 ## install
 
@@ -73,3 +74,8 @@ parsed: &main.Options{Name:"bar", Verbose:true}
 ```
 
 see also [./examples](./examples)
+
+## inspired by
+
+- https://github.com/heetch/confita
+- https://github.com/AdamSLevy/flagbind
