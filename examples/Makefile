@@ -16,4 +16,8 @@ GO ?= go
 	@echo ---
 	$(GO) run $(shell echo $@*/)main.go --log-level foo --log-level2 foo
 
+03:
+	$(GO) run $(shell echo $@*/)main.go --help || :
+	@echo ---
+	DB_URL=sqlite:///data.db $(GO) run $(shell echo $@*/)main.go --db.debug --another-db.uri sqlite:///:memory:
 	
