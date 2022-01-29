@@ -15,7 +15,7 @@ func TestBuilder_Build(t *testing.T) {
 	newBuilder := func() *structflag.Builder {
 		b := structflag.NewBuilder()
 		b.Name = "-"
-		b.FlagnameTag = "flag"
+		b.FlagnameTags = []string{"flag"}
 		b.ShorthandTag = "short"
 		b.EnvvarSupport = false
 		b.HandlingMode = pflag.ContinueOnError
@@ -219,7 +219,7 @@ func TestBuilder_Build(t *testing.T) {
 					Verbose bool `json:"verbose"` // not flag
 				}
 				b := newBuilder()
-				b.FlagnameTag = "json"
+				b.FlagnameTags = append(b.FlagnameTags, "json")
 				return b, &Options{}
 			},
 		},
@@ -232,7 +232,7 @@ func TestBuilder_Build(t *testing.T) {
 					Verbose bool `json:"verbose,omitempty"` // not flag
 				}
 				b := newBuilder()
-				b.FlagnameTag = "json"
+				b.FlagnameTags = append(b.FlagnameTags, "json")
 				return b, &Options{}
 			},
 		},
