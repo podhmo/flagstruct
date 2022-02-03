@@ -269,6 +269,21 @@ func TestBuilder_Build(t *testing.T) {
 			},
 		},
 		{
+			name: "nested,embedded",
+			args: []string{"--name", "foo"},
+			want: `{"Name": "foo"}`,
+			create: func() (*structflag.Builder, interface{}) {
+				type Person struct {
+					Name string `flag:"name"`
+				}
+				type Options struct {
+					Person
+				}
+				b := newBuilder()
+				return b, &Options{}
+			},
+		},
+		{
 			name: "nested,pointer",
 			args: []string{"--father.name", "foo"},
 			want: `{"Father": {"Name": "foo"}, "Mother": {"Name": "moo"}, "Zero": {"Name": ""}}`,

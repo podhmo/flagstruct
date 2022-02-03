@@ -146,6 +146,7 @@ func (b *Builder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, pref
 			shorthand:   shorthand,
 			prefix:      prefix,
 			hasFlagname: hasFlagname,
+			field:       rf,
 		})
 	}
 }
@@ -157,6 +158,7 @@ type fieldcontext struct {
 
 	prefix      string
 	hasFlagname bool
+	field       reflect.StructField
 }
 
 func (b *Builder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, c fieldcontext) {
@@ -194,6 +196,10 @@ func (b *Builder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value,
 		}
 		b.walkField(fs, rt.Elem(), fv.Elem(), c)
 	case reflect.Struct:
+		if c.field.Anonymous {
+			b.walk(fs, rt, fv, c.prefix)
+			return
+		}
 		b.walk(fs, rt, fv, c.prefix+c.fieldname+".")
 	case reflect.Bool:
 		ref := (*bool)(unsafe.Pointer(fv.UnsafeAddr()))
