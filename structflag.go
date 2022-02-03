@@ -100,7 +100,7 @@ type Binder struct {
 	*Config
 }
 
-func (b *Binder) Bind(fs *flag.FlagSet, o interface{}) {
+func (b *Binder) Bind(fs *flag.FlagSet, o interface{}) func(*flag.FlagSet) error {
 	rt := reflect.TypeOf(o)
 	rv := reflect.ValueOf(o)
 
@@ -111,6 +111,19 @@ func (b *Binder) Bind(fs *flag.FlagSet, o interface{}) {
 	rv = rv.Elem()
 
 	b.walk(fs, rt, rv, "")
+	return b.setByEnvvars
+}
+
+func (b *Binder) setByEnvvars(fs *flag.FlagSet) (retErr error) {
+	fs.VisitAll(func(f *flag.Flag) {
+		envname := b.EnvNameFunc(f.Name)
+		if v := os.Getenv(envname); v != "" {
+			if err := fs.Set(f.Name, v); err != nil {
+				retErr = fmt.Errorf("on envvar %s=%v, %+v", envname, v, err)
+			}
+		}
+	})
+	return retErr
 }
 
 func (b *Binder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, prefix string) {
@@ -317,23 +330,14 @@ type FlagSet struct {
 	Binder *Binder
 }
 
-func (fs *FlagSet) Parse(args []string) (retErr error) {
+func (fs *FlagSet) Parse(args []string) error {
 	if err := fs.FlagSet.Parse(args); err != nil {
-		retErr = err
-		return
+		return err
 	}
 	if fs.Binder.EnvvarSupport {
-		fs.FlagSet.VisitAll(func(f *flag.Flag) {
-			envname := fs.Binder.EnvNameFunc(f.Name)
-			if v := os.Getenv(envname); v != "" {
-				if err := fs.Set(f.Name, v); err != nil {
-					retErr = fmt.Errorf("on envvar %s=%v, %+v", envname, v, err)
-				}
-			}
-		})
-	}
-	if retErr != nil {
-		return retErr
+		if err := fs.Binder.setByEnvvars(fs.FlagSet); err != nil {
+			return err
+		}
 	}
 	return nil
 }
