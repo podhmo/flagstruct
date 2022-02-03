@@ -5,10 +5,17 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 
+	"github.com/podhmo/structflag"
 	"github.com/spf13/cobra"
 )
+
+var lsCmdOptions struct {
+	Recursive bool `flag:"recursive"`
+}
 
 // lsCmd represents the ls command
 var lsCmd = &cobra.Command{
@@ -21,11 +28,18 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("ls called")
+		fmt.Println("s3 ls called")
+		json.NewEncoder(os.Stdout).Encode(lsCmdOptions)
 	},
 }
 
 func init() {
+	b := &structflag.Binder{Config: structflag.DefaultConfig()}
+	assinByEnvVars := b.Bind(lsCmd.Flags(), &lsCmdOptions)
+	lsCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
+		return assinByEnvVars(cmd.Flags())
+	}
+
 	s3Cmd.AddCommand(lsCmd)
 
 	// Here you will define your flags and configuration settings.
