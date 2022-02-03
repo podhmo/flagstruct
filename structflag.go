@@ -286,20 +286,23 @@ func (b *Builder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value,
 	}
 }
 
-func (fs *FlagSet) Parse(args []string) error {
-	err := fs.FlagSet.Parse(args)
-	if err != nil {
-		return err
+func (fs *FlagSet) Parse(args []string) (retErr error) {
+	if err := fs.FlagSet.Parse(args); err != nil {
+		retErr = err
+		return
 	}
 	if fs.builder.EnvvarSupport {
 		fs.FlagSet.VisitAll(func(f *flag.Flag) {
 			envname := fs.builder.EnvNameFunc(f.Name)
 			if v := os.Getenv(envname); v != "" {
 				if err := fs.Set(f.Name, v); err != nil {
-					panic(fmt.Sprintf("on envvar %s=%v, %+v", envname, v, err))
+					retErr = fmt.Errorf("on envvar %s=%v, %+v", envname, v, err)
 				}
 			}
 		})
+	}
+	if retErr != nil {
+		return retErr
 	}
 	return nil
 }
