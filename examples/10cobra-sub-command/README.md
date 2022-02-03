@@ -2,6 +2,26 @@
 
 awscli like command with cobra integration
 
+```console
+$ go run main.go s3 ls --help
+awscli's s3 ls like command
+
+Usage:
+  awscli s3 ls [flags]
+
+Flags:
+  -h, --help                    help for ls
+      --human-redable           ENV: HUMAN_REDABLE	-
+      --page-size int           ENV: PAGE_SIZE	- (default 10)
+      --recursive               ENV: RECURSIVE	-
+      --request-player string   ENV: REQUEST_PLAYER	-
+      --summarize               ENV: SUMMARIZE	-
+
+$ RECURSIVE=1 go run main.go s3 ls --human-redable
+s3 ls called
+{"Recursive":true,"PageSize":10,"HumanReadable":true,"Summarize":false,"RequestPlayer":""}
+```
+
 ```go
 /*
 - s3
