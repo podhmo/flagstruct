@@ -15,9 +15,7 @@ type HasHelpText interface {
 	HelpText() string
 }
 
-// TODO: nested
 // TODO: map
-// TODO: embed
 
 type Config struct {
 	HandlingMode flag.ErrorHandling
