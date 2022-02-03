@@ -59,11 +59,6 @@ func NewBuilder() *Builder {
 	return b
 }
 
-type FlagSet struct {
-	*flag.FlagSet
-	builder *Builder
-}
-
 var (
 	rTimeDurationType reflect.Type
 	rFlagValueType    reflect.Type
@@ -290,6 +285,11 @@ func (b *Builder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value,
 		// TODO: map
 		panic(fmt.Sprintf("unsupported type %v", rt))
 	}
+}
+
+type FlagSet struct {
+	*flag.FlagSet
+	builder *Builder
 }
 
 func (fs *FlagSet) Parse(args []string) (retErr error) {
