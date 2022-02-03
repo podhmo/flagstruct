@@ -15,12 +15,9 @@ type HasHelpText interface {
 	HelpText() string
 }
 
-// TODO: nested
 // TODO: map
-// TODO: embed
 
-type Builder struct {
-	Name         string
+type Config struct {
 	HandlingMode flag.ErrorHandling
 
 	EnvvarSupport bool
@@ -34,10 +31,8 @@ type Builder struct {
 	HelpTextTag  string
 }
 
-func NewBuilder() *Builder {
-	name := os.Args[0]
-	b := &Builder{
-		Name:          name,
+func DefaultConfig() *Config {
+	c := &Config{
 		FlagnameTags:  []string{"flag"},
 		ShorthandTag:  "short",
 		HelpTextTag:   "help",
@@ -45,23 +40,18 @@ func NewBuilder() *Builder {
 		HandlingMode:  flag.ExitOnError,
 	}
 	if v := os.Getenv("ENV_PREFIX"); v != "" {
-		b.EnvPrefix = v
+		c.EnvPrefix = v
 	}
-	b.EnvNameFunc = func(name string) string {
-		return b.EnvPrefix + strings.ReplaceAll(strings.ReplaceAll(strings.ToUpper(name), "-", "_"), ".", "_")
+	c.EnvNameFunc = func(name string) string {
+		return c.EnvPrefix + strings.ReplaceAll(strings.ReplaceAll(strings.ToUpper(name), "-", "_"), ".", "_")
 	}
-	b.FlagNameFunc = func(v string) string {
+	c.FlagNameFunc = func(v string) string {
 		if strings.Contains(v, ",") {
 			return strings.TrimSpace(strings.SplitN(v, ",", 2)[0]) // e.g. json's omitempty
 		}
 		return v
 	}
-	return b
-}
-
-type FlagSet struct {
-	*flag.FlagSet
-	builder *Builder
+	return c
 }
 
 var (
@@ -72,6 +62,17 @@ var (
 func init() {
 	rTimeDurationType = reflect.TypeOf(time.Second)
 	rFlagValueType = reflect.TypeOf(func() flag.Value { return nil }).Out(0)
+}
+
+type Builder struct {
+	Name string
+	*Config
+}
+
+func NewBuilder() *Builder {
+	name := os.Args[0]
+	b := &Builder{Name: name, Config: DefaultConfig()}
+	return b
 }
 
 func (b *Builder) Build(o interface{}) *FlagSet {
@@ -89,11 +90,43 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 		name = rt.Name()
 	}
 	fs := flag.NewFlagSet(name, b.HandlingMode)
-	b.walk(fs, rt, rv, "")
-	return &FlagSet{FlagSet: fs, builder: b}
+
+	binder := &Binder{Config: b.Config}
+	binder.walk(fs, rt, rv, "")
+	return &FlagSet{FlagSet: fs, Binder: binder}
 }
 
-func (b *Builder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, prefix string) {
+type Binder struct {
+	*Config
+}
+
+func (b *Binder) Bind(fs *flag.FlagSet, o interface{}) func(*flag.FlagSet) error {
+	rt := reflect.TypeOf(o)
+	rv := reflect.ValueOf(o)
+
+	if rt.Kind() != reflect.Ptr {
+		panic(fmt.Sprintf("%v is not pointer of struct", rt)) // for canAddr
+	}
+	rt = rt.Elem()
+	rv = rv.Elem()
+
+	b.walk(fs, rt, rv, "")
+	return b.setByEnvvars
+}
+
+func (b *Binder) setByEnvvars(fs *flag.FlagSet) (retErr error) {
+	fs.VisitAll(func(f *flag.Flag) {
+		envname := b.EnvNameFunc(f.Name)
+		if v := os.Getenv(envname); v != "" {
+			if err := fs.Set(f.Name, v); err != nil {
+				retErr = fmt.Errorf("on envvar %s=%v, %+v", envname, v, err)
+			}
+		}
+	})
+	return retErr
+}
+
+func (b *Binder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, prefix string) {
 	for i := 0; i < rt.NumField(); i++ {
 		rf := rt.Field(i)
 		fv := rv.Field(i)
@@ -161,7 +194,7 @@ type fieldcontext struct {
 	field       reflect.StructField
 }
 
-func (b *Builder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, c fieldcontext) {
+func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, c fieldcontext) {
 	// for enum (TODO: skip check with cache)
 	{
 		fv := fv
@@ -292,23 +325,19 @@ func (b *Builder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value,
 	}
 }
 
-func (fs *FlagSet) Parse(args []string) (retErr error) {
+type FlagSet struct {
+	*flag.FlagSet
+	Binder *Binder
+}
+
+func (fs *FlagSet) Parse(args []string) error {
 	if err := fs.FlagSet.Parse(args); err != nil {
-		retErr = err
-		return
+		return err
 	}
-	if fs.builder.EnvvarSupport {
-		fs.FlagSet.VisitAll(func(f *flag.Flag) {
-			envname := fs.builder.EnvNameFunc(f.Name)
-			if v := os.Getenv(envname); v != "" {
-				if err := fs.Set(f.Name, v); err != nil {
-					retErr = fmt.Errorf("on envvar %s=%v, %+v", envname, v, err)
-				}
-			}
-		})
-	}
-	if retErr != nil {
-		return retErr
+	if fs.Binder.EnvvarSupport {
+		if err := fs.Binder.setByEnvvars(fs.FlagSet); err != nil {
+			return err
+		}
 	}
 	return nil
 }
