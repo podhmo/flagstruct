@@ -9,13 +9,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/podhmo/structflag"
+	"github.com/podhmo/structflag/examples/10cobra-sub-command/cmd/internal"
+	"github.com/podhmo/structflag/examples/10cobra-sub-command/s3"
 	"github.com/spf13/cobra"
 )
-
-var lsCmdOptions struct {
-	Recursive bool `flag:"recursive"`
-}
 
 // lsCmd represents the ls command
 var lsCmd = &cobra.Command{
@@ -33,13 +30,10 @@ to quickly create a Cobra application.`,
 	},
 }
 
-func init() {
-	b := &structflag.Binder{Config: structflag.DefaultConfig()}
-	assinByEnvVars := b.Bind(lsCmd.Flags(), &lsCmdOptions)
-	lsCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-		return assinByEnvVars(cmd.Flags())
-	}
+var lsCmdOptions = &s3.LsOptions{PageSize: 10}
 
+func init() {
+	internal.BindFlags(lsCmd, lsCmdOptions)
 	s3Cmd.AddCommand(lsCmd)
 
 	// Here you will define your flags and configuration settings.
