@@ -90,11 +90,30 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 		name = rt.Name()
 	}
 	fs := flag.NewFlagSet(name, b.HandlingMode)
-	b.walk(fs, rt, rv, "")
-	return &FlagSet{FlagSet: fs, builder: b}
+
+	binder := &Binder{Config: b.Config}
+	binder.walk(fs, rt, rv, "")
+	return &FlagSet{FlagSet: fs, Binder: binder}
 }
 
-func (b *Builder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, prefix string) {
+type Binder struct {
+	*Config
+}
+
+func (b *Binder) Bind(fs *flag.FlagSet, o interface{}) {
+	rt := reflect.TypeOf(o)
+	rv := reflect.ValueOf(o)
+
+	if rt.Kind() != reflect.Ptr {
+		panic(fmt.Sprintf("%v is not pointer of struct", rt)) // for canAddr
+	}
+	rt = rt.Elem()
+	rv = rv.Elem()
+
+	b.walk(fs, rt, rv, "")
+}
+
+func (b *Binder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, prefix string) {
 	for i := 0; i < rt.NumField(); i++ {
 		rf := rt.Field(i)
 		fv := rv.Field(i)
@@ -162,7 +181,7 @@ type fieldcontext struct {
 	field       reflect.StructField
 }
 
-func (b *Builder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, c fieldcontext) {
+func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, c fieldcontext) {
 	// for enum (TODO: skip check with cache)
 	{
 		fv := fv
@@ -295,7 +314,7 @@ func (b *Builder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value,
 
 type FlagSet struct {
 	*flag.FlagSet
-	builder *Builder
+	Binder *Binder
 }
 
 func (fs *FlagSet) Parse(args []string) (retErr error) {
@@ -303,9 +322,9 @@ func (fs *FlagSet) Parse(args []string) (retErr error) {
 		retErr = err
 		return
 	}
-	if fs.builder.EnvvarSupport {
+	if fs.Binder.EnvvarSupport {
 		fs.FlagSet.VisitAll(func(f *flag.Flag) {
-			envname := fs.builder.EnvNameFunc(f.Name)
+			envname := fs.Binder.EnvNameFunc(f.Name)
 			if v := os.Getenv(envname); v != "" {
 				if err := fs.Set(f.Name, v); err != nil {
 					retErr = fmt.Errorf("on envvar %s=%v, %+v", envname, v, err)
