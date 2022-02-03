@@ -19,8 +19,7 @@ type HasHelpText interface {
 // TODO: map
 // TODO: embed
 
-type Builder struct {
-	Name         string
+type Config struct {
 	HandlingMode flag.ErrorHandling
 
 	EnvvarSupport bool
@@ -34,10 +33,8 @@ type Builder struct {
 	HelpTextTag  string
 }
 
-func NewBuilder() *Builder {
-	name := os.Args[0]
-	b := &Builder{
-		Name:          name,
+func DefaultConfig() *Config {
+	c := &Config{
 		FlagnameTags:  []string{"flag"},
 		ShorthandTag:  "short",
 		HelpTextTag:   "help",
@@ -45,18 +42,18 @@ func NewBuilder() *Builder {
 		HandlingMode:  flag.ExitOnError,
 	}
 	if v := os.Getenv("ENV_PREFIX"); v != "" {
-		b.EnvPrefix = v
+		c.EnvPrefix = v
 	}
-	b.EnvNameFunc = func(name string) string {
-		return b.EnvPrefix + strings.ReplaceAll(strings.ReplaceAll(strings.ToUpper(name), "-", "_"), ".", "_")
+	c.EnvNameFunc = func(name string) string {
+		return c.EnvPrefix + strings.ReplaceAll(strings.ReplaceAll(strings.ToUpper(name), "-", "_"), ".", "_")
 	}
-	b.FlagNameFunc = func(v string) string {
+	c.FlagNameFunc = func(v string) string {
 		if strings.Contains(v, ",") {
 			return strings.TrimSpace(strings.SplitN(v, ",", 2)[0]) // e.g. json's omitempty
 		}
 		return v
 	}
-	return b
+	return c
 }
 
 var (
@@ -67,6 +64,17 @@ var (
 func init() {
 	rTimeDurationType = reflect.TypeOf(time.Second)
 	rFlagValueType = reflect.TypeOf(func() flag.Value { return nil }).Out(0)
+}
+
+type Builder struct {
+	Name string
+	*Config
+}
+
+func NewBuilder() *Builder {
+	name := os.Args[0]
+	b := &Builder{Name: name, Config: DefaultConfig()}
+	return b
 }
 
 func (b *Builder) Build(o interface{}) *FlagSet {
