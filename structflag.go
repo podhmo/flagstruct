@@ -341,3 +341,9 @@ func (fs *FlagSet) Parse(args []string) error {
 	}
 	return nil
 }
+
+func Parse(o interface{}) error {
+	b := NewBuilder()
+	fs := b.Build(o)
+	return fs.Parse(os.Args[1:])
+}
