@@ -1,4 +1,4 @@
-module github.com/podhmo/structflag
+module github.com/podhmo/flagstruct
 
 go 1.17
 

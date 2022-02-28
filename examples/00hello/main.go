@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/podhmo/structflag"
+	"github.com/podhmo/flagstruct"
 )
 
 type Options struct {
@@ -15,7 +15,7 @@ type Options struct {
 func main() {
 	options := &Options{Name: "foo"} // default value
 
-	b := structflag.NewBuilder()
+	b := flagstruct.NewBuilder()
 	b.Name = "hello"
 	b.EnvPrefix = "X_"
 

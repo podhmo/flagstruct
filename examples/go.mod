@@ -1,10 +1,10 @@
-module github.com/podhmo/structflag/examples
+module github.com/podhmo/flagstruct/examples
 
 go 1.17
 
-replace github.com/podhmo/structflag => ../
+replace github.com/podhmo/flagstruct => ../
 
-require github.com/podhmo/structflag v0.0.0-00010101000000-000000000000
+require github.com/podhmo/flagstruct v0.0.0-00010101000000-000000000000
 
 require (
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect

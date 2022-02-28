@@ -14,7 +14,7 @@
  
  func main() {
 @@ -18,6 +20,7 @@
- 	b := structflag.NewBuilder()
+ 	b := flagstruct.NewBuilder()
  	b.Name = "hello"
  	b.EnvPrefix = "X_"
 +	b.FlagnameTags = append(b.FlagnameTags, "json")

@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/podhmo/structflag/examples/10cobra-sub-command/cmd/internal"
-	"github.com/podhmo/structflag/examples/10cobra-sub-command/s3"
+	"github.com/podhmo/flagstruct/examples/10cobra-sub-command/cmd/internal"
+	"github.com/podhmo/flagstruct/examples/10cobra-sub-command/s3"
 	"github.com/spf13/cobra"
 )
 

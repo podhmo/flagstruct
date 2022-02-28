@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/podhmo/structflag"
+	"github.com/podhmo/flagstruct"
 )
 
 type DBConfig struct {
@@ -20,7 +20,7 @@ type Options struct {
 
 func main() {
 	options := &Options{}
-	b := structflag.NewBuilder()
+	b := flagstruct.NewBuilder()
 	fs := b.Build(options)
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		panic(err)

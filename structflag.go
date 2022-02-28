@@ -1,4 +1,4 @@
-package structflag
+package flagstruct
 
 import (
 	"fmt"
