@@ -1,11 +1,11 @@
 package internal
 
 import (
-	"github.com/podhmo/structflag"
+	"github.com/podhmo/flagstruct"
 	"github.com/spf13/cobra"
 )
 
-var binder = &structflag.Binder{Config: structflag.DefaultConfig()}
+var binder = &flagstruct.Binder{Config: flagstruct.DefaultConfig()}
 
 func BindFlags(cmd *cobra.Command, options interface{}) {
 	assinByEnvVars := binder.Bind(cmd.Flags(), options)

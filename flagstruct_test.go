@@ -1,4 +1,4 @@
-package structflag_test
+package flagstruct_test
 
 import (
 	"encoding/json"
@@ -7,13 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/podhmo/structflag"
+	"github.com/podhmo/flagstruct"
 	"github.com/spf13/pflag"
 )
 
 func TestBuilder_Build(t *testing.T) {
-	newBuilder := func() *structflag.Builder {
-		b := structflag.NewBuilder()
+	newBuilder := func() *flagstruct.Builder {
+		b := flagstruct.NewBuilder()
 		b.Name = "-"
 		b.FlagnameTags = []string{"flag"}
 		b.ShorthandTag = "short"
@@ -48,7 +48,7 @@ func TestBuilder_Build(t *testing.T) {
 		name   string
 		args   []string
 		want   string
-		create func() (*structflag.Builder, interface{})
+		create func() (*flagstruct.Builder, interface{})
 
 		errorString string
 	}{
@@ -56,7 +56,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "types--string",
 			args: []string{"--name", "foo"},
 			want: `{"Name":"foo"}`,
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Options struct {
 					Name string `flag:"name"`
 				}
@@ -67,7 +67,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "types--string-pointer",
 			args: []string{"--name", "foo"},
 			want: `{"Name":"foo"}`,
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Options struct {
 					Name *string `flag:"name"`
 				}
@@ -78,7 +78,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "types--string,default",
 			args: []string{"--name2", "bar"},
 			want: `{"Name":"foo", "Name2":"bar"}`,
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Options struct {
 					Name  string `flag:"name"`
 					Name2 string `flag:"name2"`
@@ -90,7 +90,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "types--int",
 			args: []string{"--age", "20"},
 			want: `{"Age":20}`,
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Options struct {
 					Age int `flag:"age"`
 				}
@@ -101,7 +101,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "types--int-slice",
 			args: []string{"-n", "20", "-n", "30"},
 			want: `{"Nums": [20, 30]}`,
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Options struct {
 					Nums []int `flag:"nums" short:"n"`
 				}
@@ -112,7 +112,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "options--long",
 			args: []string{"--verbose"},
 			want: `{"Verbose":true}`,
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Options struct {
 					Verbose bool `flag:"verbose"`
 				}
@@ -123,7 +123,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "options--short",
 			args: []string{"-v"},
 			want: `{"Verbose":true}`,
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Options struct {
 					Verbose bool `flag:"verbose" short:"v"`
 				}
@@ -134,7 +134,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "options--short-only",
 			args: []string{"-v"},
 			want: `{"Verbose":true}`,
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Options struct {
 					Verbose bool `short:"v"`
 				}
@@ -145,7 +145,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "options--nothing",
 			args: []string{"--Verbose"},
 			want: `{"Verbose":true}`,
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Options struct {
 					Verbose bool
 				}
@@ -156,7 +156,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "skip--exported,tag",
 			args: []string{"--name", "foo"},
 			want: `{"name":"foo"}`,
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Options struct {
 					Name string `flag:"-"`
 				}
@@ -168,7 +168,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "skip--unexported",
 			args: []string{"--name", "foo"},
 			want: `{"name":"foo"}`,
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Options struct {
 					name string
 				}
@@ -180,7 +180,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "skip--unexported,tag,not-skipped",
 			args: []string{"--name", "foo"},
 			want: `{}`, // normalized by json, so unexported field is not included.
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Options struct {
 					name string `flag:"name"`
 				}
@@ -191,7 +191,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "skip--pointer",
 			args: []string{"--name", "foo"},
 			want: `{"Name":"foo"}`,
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Options struct {
 					Name *string
 				}
@@ -203,7 +203,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "skip--pointer,tag,not-skipped",
 			args: []string{"--name", "foo"},
 			want: `{"Name":"foo"}`,
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Options struct {
 					Name *string `flag:"name"`
 				}
@@ -214,7 +214,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "lookup--tag--json",
 			args: []string{"--verbose"},
 			want: `{"verbose":true}`, // serialized by encoding/json
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Options struct {
 					Verbose bool `json:"verbose"` // not flag
 				}
@@ -227,7 +227,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "lookup--tag--json,omitempty",
 			args: []string{"--verbose"},
 			want: `{"verbose":true}`, // serialized by encoding/json
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Options struct {
 					Verbose bool `json:"verbose,omitempty"` // not flag
 				}
@@ -240,7 +240,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "customize--enum",
 			args: []string{"--log-level", "info"},
 			want: `{"LogLevel":"INFO", "LogLevelDefault": "WARN", "LogLevelPointer": "WARN"}`,
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Options struct {
 					LogLevel        LogLevel  `flag:"log-level"`
 					LogLevelDefault LogLevel  `flag:"log-level-default"`
@@ -255,7 +255,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "nested",
 			args: []string{"--father.name", "foo"},
 			want: `{"Father": {"Name": "foo"}, "Mother": {"Name": "moo"}, "Zero": {"Name": ""}}`,
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Person struct {
 					Name string `flag:"name"`
 				}
@@ -272,7 +272,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "nested,embedded",
 			args: []string{"--name", "foo"},
 			want: `{"Name": "foo"}`,
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Person struct {
 					Name string `flag:"name"`
 				}
@@ -287,7 +287,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "nested,pointer",
 			args: []string{"--father.name", "foo"},
 			want: `{"Father": {"Name": "foo"}, "Mother": {"Name": "moo"}, "Zero": {"Name": ""}}`,
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Person struct {
 					Name string `flag:"name"`
 				}
@@ -304,7 +304,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "nested,pointer,with-json",
 			args: []string{"--zero.name", "foo"},
 			want: `{"zero": {"name": "foo"}}`,
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Person struct {
 					Name string `json:"name"`
 				}
@@ -320,7 +320,7 @@ func TestBuilder_Build(t *testing.T) {
 			name: "nested,pointer,with-json,override",
 			args: []string{"--zero.name", "foo"},
 			want: `{}`,
-			create: func() (*structflag.Builder, interface{}) {
+			create: func() (*flagstruct.Builder, interface{}) {
 				type Person struct {
 					Name string `json:"name"`
 				}
@@ -339,7 +339,7 @@ func TestBuilder_Build(t *testing.T) {
 		// 	name: "nested,slice",
 		// 	args: []string{"--people.name", "foo"},
 		// 	want: `{"People": [{"Name": "moo"}, {"Name": "foo"}]}`,
-		// 	create: func() (*structflag.Builder, interface{}) {
+		// 	create: func() (*flagstruct.Builder, interface{}) {
 		// 		type Person struct {
 		// 			Name string `flag:"name"`
 		// 		}
@@ -403,7 +403,7 @@ func (v LogLevel) Validate() error {
 	}
 }
 
-// for structflag.HasHelpText
+// for flagstruct.HasHelpText
 func (v LogLevel) HelpText() string {
 	return "log level {DEBUG, INFO, WARN, ERROR}"
 }

@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/podhmo/structflag"
+	"github.com/podhmo/flagstruct"
 )
 
 type Options struct {
@@ -19,7 +19,7 @@ func main() {
 	defaultLogLevel := LogLevelInfo
 	options := &Options{Name: "foo", LogLevel: defaultLogLevel, LogLevel2: &defaultLogLevel} // default value
 
-	b := structflag.NewBuilder()
+	b := flagstruct.NewBuilder()
 	b.Name = "hello"
 	b.EnvPrefix = "X_"
 
@@ -48,7 +48,7 @@ func (v LogLevel) Validate() error {
 	}
 }
 
-// for structflag.HasHelpText
+// for flagstruct.HasHelpText
 func (v LogLevel) HelpText() string {
 	return "log level {DEBUG, INFO, WARN, ERROR}"
 }
