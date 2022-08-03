@@ -1,6 +1,7 @@
 package flagstruct
 
 import (
+	"encoding"
 	"fmt"
 	"os"
 	"reflect"
@@ -55,13 +56,15 @@ func DefaultConfig() *Config {
 }
 
 var (
-	rTimeDurationType reflect.Type
-	rFlagValueType    reflect.Type
+	rTimeDurationType    reflect.Type
+	rFlagValueType       reflect.Type
+	rTextUnmarshalerType reflect.Type
 )
 
 func init() {
 	rTimeDurationType = reflect.TypeOf(time.Second)
 	rFlagValueType = reflect.TypeOf(func() flag.Value { return nil }).Out(0)
+	rTextUnmarshalerType = reflect.TypeOf(func() encoding.TextUnmarshaler { return nil }).Out(0)
 }
 
 type Builder struct {
@@ -214,6 +217,23 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 				reflect.ValueOf(c.shorthand),
 				reflect.ValueOf(c.helpText),
 			})
+			return
+		}
+
+		if ft.Implements(rTextUnmarshalerType) {
+			if fv.IsNil() && fv.CanAddr() {
+				// flagname is not found, will be skipped (even if the field is a pointer, with field tag, it will be treated as a flag forcely).
+				if !c.hasFlagname {
+					return
+				}
+				fv.Set(reflect.New(rt.Elem()))
+			}
+
+			ref := fv.Interface().(interface {
+				encoding.TextMarshaler
+				encoding.TextUnmarshaler
+			})
+			fs.VarP(newTextValue(ref, ref), c.fieldname, c.shorthand, c.helpText)
 			return
 		}
 	}
