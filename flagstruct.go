@@ -211,13 +211,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 		}
 
 		if ft.Implements(rFlagValueType) {
-			rfn := reflect.ValueOf(fs.VarP)
-			rfn.Call([]reflect.Value{
-				fv,
-				reflect.ValueOf(c.fieldname),
-				reflect.ValueOf(c.shorthand),
-				reflect.ValueOf(c.helpText),
-			})
+			fs.VarP(fv.Interface().(flag.Value), c.fieldname, c.shorthand, c.helpText)
 			return
 		}
 
