@@ -12,9 +12,12 @@ import (
 // 	f.Var(newTextValue(value, p), name, usage)
 // }
 
-type textValue struct{ p encoding.TextUnmarshaler }
+type textValue struct {
+	p     encoding.TextUnmarshaler
+	isPtr bool
+}
 
-func newTextValue(val encoding.TextMarshaler, p encoding.TextUnmarshaler) textValue {
+func newTextValue(val encoding.TextMarshaler, p encoding.TextUnmarshaler, isPtr bool) textValue {
 	ptrVal := reflect.ValueOf(p)
 	if ptrVal.Kind() != reflect.Ptr {
 		panic("variable value type must be a pointer")
@@ -27,7 +30,7 @@ func newTextValue(val encoding.TextMarshaler, p encoding.TextUnmarshaler) textVa
 		panic(fmt.Sprintf("default type does not match variable type: %v != %v", defVal.Type(), ptrVal.Type().Elem()))
 	}
 	ptrVal.Elem().Set(defVal)
-	return textValue{p}
+	return textValue{p, isPtr}
 }
 
 func (v textValue) Set(s string) error {
@@ -49,5 +52,8 @@ func (v textValue) String() string {
 
 // for pflag.Value
 func (v textValue) Type() string {
-	return "TextUnmarshaler"
+	if !v.isPtr {
+		return fmt.Sprintf("%T", v.p)[1:]
+	}
+	return fmt.Sprintf("%T", v.p)
 }

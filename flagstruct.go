@@ -202,9 +202,10 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 	{
 		fv := fv
 		ft := fv.Type()
+		isPtr := ft.Kind() == reflect.Ptr
 
 		// Set() is pointer receiver only
-		if ft.Kind() != reflect.Ptr {
+		if !isPtr {
 			fv = fv.Addr()
 			ft = reflect.PtrTo(ft)
 		}
@@ -233,7 +234,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 				encoding.TextMarshaler
 				encoding.TextUnmarshaler
 			})
-			fs.VarP(newTextValue(ref, ref), c.fieldname, c.shorthand, c.helpText)
+			fs.VarP(newTextValue(ref, ref, isPtr), c.fieldname, c.shorthand, c.helpText)
 			return
 		}
 	}
