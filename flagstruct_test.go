@@ -3,6 +3,7 @@ package flagstruct_test
 import (
 	"encoding/json"
 	"fmt"
+	"net"
 	"reflect"
 	"strings"
 	"testing"
@@ -234,6 +235,28 @@ func TestBuilder_Build(t *testing.T) {
 				b := newBuilder()
 				b.FlagnameTags = append(b.FlagnameTags, "json")
 				return b, &Options{}
+			},
+		},
+		{
+			name: "types--TextUnmarshaller",
+			args: []string{"--ip", "127.0.0.1"},
+			want: `{"ip":"127.0.0.1"}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type Options struct {
+					IP net.IP `json:"ip" flag:"ip"`
+				}
+				return newBuilder(), &Options{}
+			},
+		},
+		{
+			name: "types--TextUnmarshaller-pointer",
+			args: []string{"--ip", "127.0.0.1"},
+			want: `{"ip":"127.0.0.1"}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type Options struct {
+					IP *net.IP `json:"ip" flag:"ip"`
+				}
+				return newBuilder(), &Options{}
 			},
 		},
 		{
