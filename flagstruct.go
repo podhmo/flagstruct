@@ -357,7 +357,7 @@ func (fs *FlagSet) Parse(args []string) error {
 	return nil
 }
 
-func Parse(o interface{}) error {
+func Parse[T any](o *T) error {
 	b := NewBuilder()
 	fs := b.Build(o)
 	return fs.Parse(os.Args[1:])
