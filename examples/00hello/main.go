@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/podhmo/flagstruct"
 )
@@ -15,13 +14,9 @@ type Options struct {
 func main() {
 	options := &Options{Name: "foo"} // default value
 
-	b := flagstruct.NewBuilder()
-	b.Name = "hello"
-	b.EnvPrefix = "X_"
-
-	fs := b.Build(options)
-	fs.Parse(os.Args[1:])
-
+	flagstruct.Parse(options, func(b *flagstruct.Builder) {
+		b.Name = "hello"
+		b.EnvPrefix = "X_"
+	})
 	fmt.Printf("parsed: %#+v\n", options)
-
 }

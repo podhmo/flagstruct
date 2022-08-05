@@ -20,11 +20,9 @@ type Options struct {
 
 func main() {
 	options := &Options{}
-	b := flagstruct.NewBuilder()
-	fs := b.Build(options)
-	if err := fs.Parse(os.Args[1:]); err != nil {
-		panic(err)
-	}
+
+	flagstruct.Parse(options)
+
 	fmt.Println("parsed")
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
