@@ -21,3 +21,15 @@ GO ?= go
 	@echo ---
 	DB_URI=sqlite:///data.db $(GO) run $(shell echo $@*/)main.go --db.debug --another-db.uri sqlite:///:memory:
 	
+04:
+	$(GO) run $(shell echo $@*/)main.go --help || :
+	@echo ---
+	$(GO) run $(shell echo $@*/)main.go --ip 127.0.0.1
+	
+05:
+	$(GO) run $(shell echo $@*/)main.go --help || :
+	@echo ---
+	$(GO) run $(shell echo $@*/)main.go --value 20
+	@echo ---
+	$(GO) run $(shell echo $@*/)main.go --value foo  # ng
+	
