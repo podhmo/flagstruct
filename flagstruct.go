@@ -376,7 +376,3 @@ func Parse[T any](o *T, options ...func(*Builder)) {
 func WithContinueOnError(b *Builder) {
 	b.HandlingMode = flag.ContinueOnError
 }
-
-func WithContinueOnError(b *Builder) {
-	b.HandlingMode = flag.ContinueOnError
-}
