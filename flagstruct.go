@@ -357,17 +357,20 @@ func (fs *FlagSet) Parse(args []string) error {
 	return nil
 }
 
-func ParseArgs[T any](o *T, args []string, options ...func(*Builder)) error {
+func Build[T any](o *T, options ...func(*Builder)) *FlagSet {
 	b := NewBuilder()
 	for _, opt := range options {
 		opt(b)
 	}
-	fs := b.Build(o)
-	return fs.Parse(args)
+	return b.Build(o)
 }
 
-func Parse[T any](o *T, options ...func(*Builder)) error {
-	return ParseArgs(o, os.Args[1:], options...)
+func ParseArgs[T any](o *T, args []string, options ...func(*Builder)) {
+	_ = Build(o, options...).Parse(args) // never error, because default handling mode is not ContinueOnError
+}
+
+func Parse[T any](o *T, options ...func(*Builder)) {
+	_ = Build(o, options...).Parse(os.Args[1:]) // never error, because default handling mode is not ContinueOnError
 }
 
 func WithContinueOnError(b *Builder) {
