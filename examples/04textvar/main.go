@@ -17,12 +17,10 @@ type Options struct {
 func main() {
 	options := &Options{IP2: net.IPv4(0, 0, 0, 1)} // default value
 
-	b := flagstruct.NewBuilder()
-	b.Name = "textvar"
-	b.EnvPrefix = "X_"
-
-	fs := b.Build(options)
-	fs.Parse(os.Args[1:])
+	flagstruct.Parse(options, func(b *flagstruct.Builder) {
+		b.Name = "textvar"
+		b.EnvPrefix = "X_"
+	})
 
 	fmt.Printf("parsed: %#+v\n", options)
 	fmt.Println("----------------------------------------")

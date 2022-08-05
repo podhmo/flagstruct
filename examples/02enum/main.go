@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"reflect"
 	"strings"
 
@@ -19,15 +18,12 @@ func main() {
 	defaultLogLevel := LogLevelInfo
 	options := &Options{Name: "foo", LogLevel: defaultLogLevel, LogLevel2: &defaultLogLevel} // default value
 
-	b := flagstruct.NewBuilder()
-	b.Name = "hello"
-	b.EnvPrefix = "X_"
-
-	fs := b.Build(options)
-	fs.Parse(os.Args[1:])
+	flagstruct.Parse(options, func(b *flagstruct.Builder) {
+		b.Name = "hello"
+		b.EnvPrefix = "X_"
+	})
 
 	fmt.Printf("parsed: %#+v\n", options)
-
 }
 
 type LogLevel string
