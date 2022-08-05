@@ -357,8 +357,15 @@ func (fs *FlagSet) Parse(args []string) error {
 	return nil
 }
 
-func Parse[T any](o *T) error {
+func ParseArgs[T any](o *T, args []string, options ...func(*Builder)) error {
 	b := NewBuilder()
+	for _, opt := range options {
+		opt(b)
+	}
 	fs := b.Build(o)
-	return fs.Parse(os.Args[1:])
+	return fs.Parse(args)
+}
+
+func Parse[T any](o *T, options ...func(*Builder)) error {
+	return ParseArgs(o, os.Args[1:], options...)
 }
