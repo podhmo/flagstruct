@@ -369,3 +369,7 @@ func ParseArgs[T any](o *T, args []string, options ...func(*Builder)) error {
 func Parse[T any](o *T, options ...func(*Builder)) error {
 	return ParseArgs(o, os.Args[1:], options...)
 }
+
+func WithContinueOnError(b *Builder) {
+	b.HandlingMode = flag.ContinueOnError
+}
