@@ -10,8 +10,10 @@ import (
 )
 
 type Config struct {
-	Name string `flag:"name" required:"true" help:"name for the user"`
+	Name string `json:"name" flag:"name" required:"true" help:"name for the user"`
 }
+
+var debug bool
 
 func main() {
 	if err := Execute(); err != nil {
@@ -26,8 +28,6 @@ var rootCmd = &cobra.Command{
 	hello world`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		debug, _ := cmd.Flags().GetBool("debug")
-
 		enc := json.NewEncoder(os.Stdout)
 		enc.Encode(map[string]interface{}{
 			"debug":  debug,
@@ -39,7 +39,7 @@ var rootCmd = &cobra.Command{
 var config = &Config{}
 
 func init() {
-	rootCmd.Flags().BoolP("debug", "", false, "debug option")
+	rootCmd.Flags().BoolVarP(&debug, "debug", "", false, "debug option")
 
 	binder := &flagstruct.Binder{Config: flagstruct.DefaultConfig()}
 	binder.EnvPrefix = "X_"
