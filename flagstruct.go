@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 	"unsafe"
@@ -30,6 +31,7 @@ type Config struct {
 
 	ShorthandTag string
 	HelpTextTag  string
+	RequiredTag  string
 }
 
 func DefaultConfig() *Config {
@@ -37,6 +39,7 @@ func DefaultConfig() *Config {
 		FlagnameTags:  []string{"flag"},
 		ShorthandTag:  "short",
 		HelpTextTag:   "help",
+		RequiredTag:   "required",
 		EnvvarSupport: true,
 		HandlingMode:  flag.ExitOnError,
 	}
@@ -101,6 +104,10 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 
 type Binder struct {
 	*Config
+
+	State struct {
+		visitedFields []fieldcontext
+	}
 }
 
 func (b *Binder) Bind(fs *flag.FlagSet, o interface{}) func(*flag.FlagSet) error {
@@ -127,6 +134,16 @@ func (b *Binder) setByEnvvars(fs *flag.FlagSet) (retErr error) {
 		}
 	})
 	return retErr
+}
+
+func (b *Binder) AllRequiredFlagNames() []string {
+	var required []string
+	for _, fc := range b.State.visitedFields {
+		if fc.required {
+			required = append(required, fc.fieldname)
+		}
+	}
+	return required
 }
 
 func (b *Binder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, prefix string) {
@@ -176,14 +193,24 @@ func (b *Binder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, prefi
 			}
 		}
 
-		b.walkField(fs, rf.Type, fv, fieldcontext{
-			fieldname:   fieldname,
-			helpText:    helpText,
-			shorthand:   shorthand,
+		required := false
+		if ok, _ := strconv.ParseBool(rf.Tag.Get(b.RequiredTag)); ok {
+			required = true
+		}
+
+		fc := fieldcontext{
+			fieldname: fieldname,
+			helpText:  helpText,
+			required:  required,
+			shorthand: shorthand,
+
 			prefix:      prefix,
 			hasFlagname: hasFlagname,
 			field:       rf,
-		})
+		}
+
+		b.State.visitedFields = append(b.State.visitedFields, fc)
+		b.walkField(fs, rf.Type, fv, fc)
 	}
 }
 
@@ -191,6 +218,7 @@ type fieldcontext struct {
 	fieldname string
 	helpText  string
 	shorthand string
+	required  bool
 
 	prefix      string
 	hasFlagname bool
