@@ -11,8 +11,6 @@ define flagset with struct and reflect
 
 ## install
 
-(This package is currently under development (wip))
-
 ```console
 $ go get -v github.com/podhmo/flagstruct
 ```
