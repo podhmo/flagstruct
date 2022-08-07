@@ -26,6 +26,8 @@ func main() {
 		panic(err)
 	}
 
+	fs.Parse(os.Args[1:])
+
 	enc := json.NewEncoder(os.Stdout)
 	enc.Encode(map[string]interface{}{
 		"debug":  debug,

@@ -32,4 +32,16 @@ GO ?= go
 	$(GO) run $(shell echo $@*/)main.go --value 20
 	@echo ---
 	$(GO) run $(shell echo $@*/)main.go --value foo  # ng
-	
+
+06:
+	$(GO) run $(shell echo $@*/)main.go --help || :
+	@echo ---
+	$(GO) run $(shell echo $@*/)main.go --name foo
+
+07:
+	$(GO) run $(shell echo $@*/)main.go --help || :
+	@echo ---
+	$(GO) run $(shell echo $@*/)main.go --name foo
+	@echo ---
+	$(GO) run $(shell echo $@*/)main.go # ng
+
