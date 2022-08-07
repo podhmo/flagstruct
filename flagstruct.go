@@ -120,7 +120,7 @@ func (b *Binder) Bind(fs *flag.FlagSet, o interface{}) func(*flag.FlagSet) error
 func (b *Binder) setByEnvvars(fs *flag.FlagSet) (retErr error) {
 	fs.VisitAll(func(f *flag.Flag) {
 		envname := b.EnvNameFunc(f.Name)
-		if v := os.Getenv(envname); v != "" {
+		if v, ok := os.LookupEnv(envname); ok {
 			if err := fs.Set(f.Name, v); err != nil {
 				retErr = fmt.Errorf("on envvar %s=%v, %+v", envname, v, err)
 			}
