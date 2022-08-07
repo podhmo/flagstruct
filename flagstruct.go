@@ -146,6 +146,15 @@ func (b *Binder) AllRequiredFlagNames() []string {
 	return required
 }
 
+func (b *Binder) ValidateRequiredFlags(fs *flag.FlagSet) error {
+	for _, requiredName := range b.AllRequiredFlagNames() {
+		if !fs.Lookup(requiredName).Changed {
+			return fmt.Errorf("required flag(s) %q not set", requiredName)
+		}
+	}
+	return nil
+}
+
 func (b *Binder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, prefix string) {
 	for i := 0; i < rt.NumField(); i++ {
 		rf := rt.Field(i)
@@ -382,7 +391,8 @@ func (fs *FlagSet) Parse(args []string) error {
 			return err
 		}
 	}
-	return nil
+
+	return fs.Binder.ValidateRequiredFlags(fs.FlagSet)
 }
 
 func Build[T any](o *T, options ...func(*Builder)) *FlagSet {
@@ -394,13 +404,29 @@ func Build[T any](o *T, options ...func(*Builder)) *FlagSet {
 }
 
 func ParseArgs[T any](o *T, args []string, options ...func(*Builder)) {
-	_ = Build(o, options...).Parse(args) // never error, because default handling mode is not ContinueOnError
+	fs := Build(o, options...)
+	if err := fs.Parse(args); err != nil { // never error in fs.FlagSet.Parse(), because default handling mode is not ContinueOnError
+		PrintHelpAndExitIfError(fs.FlagSet, err, 2)
+	}
 }
 
 func Parse[T any](o *T, options ...func(*Builder)) {
-	_ = Build(o, options...).Parse(os.Args[1:]) // never error, because default handling mode is not ContinueOnError
+	args := os.Args[1:]
+	fs := Build(o, options...)
+	if err := fs.Parse(args); err != nil { // never error in fs.FlagSet.Parse(), because default handling mode is not ContinueOnError
+		PrintHelpAndExitIfError(fs.FlagSet, err, 2)
+	}
 }
 
 func WithContinueOnError(b *Builder) {
 	b.HandlingMode = flag.ContinueOnError
+}
+
+func PrintHelpAndExitIfError(fs *flag.FlagSet, err error, code int) {
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %+v\n", err)
+		fs.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "\n%+v\n", err)
+		os.Exit(code)
+	}
 }
