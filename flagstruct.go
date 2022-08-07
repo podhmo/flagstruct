@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 	"unsafe"
@@ -30,6 +31,7 @@ type Config struct {
 
 	ShorthandTag string
 	HelpTextTag  string
+	RequiredTag  string
 }
 
 func DefaultConfig() *Config {
@@ -37,6 +39,7 @@ func DefaultConfig() *Config {
 		FlagnameTags:  []string{"flag"},
 		ShorthandTag:  "short",
 		HelpTextTag:   "help",
+		RequiredTag:   "required",
 		EnvvarSupport: true,
 		HandlingMode:  flag.ExitOnError,
 	}
@@ -101,6 +104,10 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 
 type Binder struct {
 	*Config
+
+	State struct {
+		visitedFields []fieldcontext
+	}
 }
 
 func (b *Binder) Bind(fs *flag.FlagSet, o interface{}) func(*flag.FlagSet) error {
@@ -120,13 +127,32 @@ func (b *Binder) Bind(fs *flag.FlagSet, o interface{}) func(*flag.FlagSet) error
 func (b *Binder) setByEnvvars(fs *flag.FlagSet) (retErr error) {
 	fs.VisitAll(func(f *flag.Flag) {
 		envname := b.EnvNameFunc(f.Name)
-		if v := os.Getenv(envname); v != "" {
+		if v, ok := os.LookupEnv(envname); ok {
 			if err := fs.Set(f.Name, v); err != nil {
 				retErr = fmt.Errorf("on envvar %s=%v, %+v", envname, v, err)
 			}
 		}
 	})
 	return retErr
+}
+
+func (b *Binder) AllRequiredFlagNames() []string {
+	var required []string
+	for _, fc := range b.State.visitedFields {
+		if fc.required {
+			required = append(required, fc.fieldname)
+		}
+	}
+	return required
+}
+
+func (b *Binder) ValidateRequiredFlags(fs *flag.FlagSet) error {
+	for _, requiredName := range b.AllRequiredFlagNames() {
+		if !fs.Lookup(requiredName).Changed {
+			return fmt.Errorf("required flag(s) %q not set", requiredName)
+		}
+	}
+	return nil
 }
 
 func (b *Binder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, prefix string) {
@@ -176,14 +202,24 @@ func (b *Binder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, prefi
 			}
 		}
 
-		b.walkField(fs, rf.Type, fv, fieldcontext{
-			fieldname:   fieldname,
-			helpText:    helpText,
-			shorthand:   shorthand,
+		required := false
+		if ok, _ := strconv.ParseBool(rf.Tag.Get(b.RequiredTag)); ok {
+			required = true
+		}
+
+		fc := fieldcontext{
+			fieldname: fieldname,
+			helpText:  helpText,
+			required:  required,
+			shorthand: shorthand,
+
 			prefix:      prefix,
 			hasFlagname: hasFlagname,
 			field:       rf,
-		})
+		}
+
+		b.State.visitedFields = append(b.State.visitedFields, fc)
+		b.walkField(fs, rf.Type, fv, fc)
 	}
 }
 
@@ -191,6 +227,7 @@ type fieldcontext struct {
 	fieldname string
 	helpText  string
 	shorthand string
+	required  bool
 
 	prefix      string
 	hasFlagname bool
@@ -354,7 +391,8 @@ func (fs *FlagSet) Parse(args []string) error {
 			return err
 		}
 	}
-	return nil
+
+	return fs.Binder.ValidateRequiredFlags(fs.FlagSet)
 }
 
 func Build[T any](o *T, options ...func(*Builder)) *FlagSet {
@@ -366,13 +404,29 @@ func Build[T any](o *T, options ...func(*Builder)) *FlagSet {
 }
 
 func ParseArgs[T any](o *T, args []string, options ...func(*Builder)) {
-	_ = Build(o, options...).Parse(args) // never error, because default handling mode is not ContinueOnError
+	fs := Build(o, options...)
+	if err := fs.Parse(args); err != nil { // never error in fs.FlagSet.Parse(), because default handling mode is not ContinueOnError
+		PrintHelpAndExitIfError(fs.FlagSet, err, 2)
+	}
 }
 
 func Parse[T any](o *T, options ...func(*Builder)) {
-	_ = Build(o, options...).Parse(os.Args[1:]) // never error, because default handling mode is not ContinueOnError
+	args := os.Args[1:]
+	fs := Build(o, options...)
+	if err := fs.Parse(args); err != nil { // never error in fs.FlagSet.Parse(), because default handling mode is not ContinueOnError
+		PrintHelpAndExitIfError(fs.FlagSet, err, 2)
+	}
 }
 
 func WithContinueOnError(b *Builder) {
 	b.HandlingMode = flag.ContinueOnError
+}
+
+func PrintHelpAndExitIfError(fs *flag.FlagSet, err error, code int) {
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %+v\n", err)
+		fs.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "\n%+v\n", err)
+		os.Exit(code)
+	}
 }

@@ -9,7 +9,7 @@ import (
 )
 
 type Config struct {
-	Name string `flag:"name"`
+	Name string `flag:"name" required:"true"`
 }
 
 var debug bool
@@ -21,9 +21,16 @@ func main() {
 	config := &Config{Name: "anonymous"}
 
 	binder := &flagstruct.Binder{Config: flagstruct.DefaultConfig()}
+	binder.EnvPrefix = "X_"
 	setenv := binder.Bind(fs, config)
 	if err := setenv(fs); err != nil {
 		panic(err)
+	}
+
+	fs.Parse(os.Args[1:])
+
+	if err := binder.ValidateRequiredFlags(fs); err != nil {
+		flagstruct.PrintHelpAndExitIfError(fs, err, 2)
 	}
 
 	enc := json.NewEncoder(os.Stdout)
