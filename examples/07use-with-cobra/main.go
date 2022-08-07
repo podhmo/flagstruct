@@ -10,7 +10,7 @@ import (
 )
 
 type Config struct {
-	Name string `flag:"name" help:"name for the user"`
+	Name string `flag:"name" required:"true" help:"name for the user"`
 }
 
 func main() {
@@ -44,13 +44,15 @@ func init() {
 	binder := &flagstruct.Binder{Config: flagstruct.DefaultConfig()}
 	binder.EnvPrefix = "X_"
 	fs := rootCmd.Flags()
+
 	setenv := binder.Bind(fs, config)
 	if err := setenv(fs); err != nil {
 		panic(err)
 	}
 
-	// TODO: fixme
-	rootCmd.MarkFlagRequired("name") // required flag(s) "name" not set
+	for _, requiredName := range binder.AllRequiredFlagNames() {
+		cobra.MarkFlagRequired(fs, requiredName) // e.g. required flag(s) "name" not set
+	}
 }
 
 func Execute() error {
