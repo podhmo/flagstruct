@@ -31,7 +31,9 @@ GO ?= go
 	@echo ---
 	$(GO) run $(shell echo $@*/)main.go --value 20
 	@echo ---
-	$(GO) run $(shell echo $@*/)main.go --value foo  # ng
+	$(GO) run $(shell echo $@*/)main.go --value foo || : # ng
+	@echo ---
+	$(GO) run $(shell echo $@*/)main.go # ng
 
 06:
 	$(GO) run $(shell echo $@*/)main.go --help || :

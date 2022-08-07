@@ -9,7 +9,7 @@ import (
 )
 
 type Options struct {
-	Value   int  `flag:"value"`
+	Value   int  `flag:"value" required:"true"`
 	Verbose bool `flag:"verbose" short:"v"`
 }
 
