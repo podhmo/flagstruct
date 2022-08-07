@@ -1,11 +1,17 @@
 package main
 
 import (
-	"fmt"
+	"encoding/json"
 	"log"
+	"os"
 
+	"github.com/podhmo/flagstruct"
 	"github.com/spf13/cobra"
 )
+
+type Config struct {
+	Name string `flag:"name" help:"name for the user"`
+}
 
 func main() {
 	if err := Execute(); err != nil {
@@ -20,14 +26,30 @@ var rootCmd = &cobra.Command{
 	hello world`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		name, err := cmd.Flags().GetString("name")
-		fmt.Println("hello", name, err, "-", args)
+		debug, _ := cmd.Flags().GetBool("debug")
+
+		enc := json.NewEncoder(os.Stdout)
+		enc.Encode(map[string]interface{}{
+			"debug":  debug,
+			"config": config,
+		})
 	},
 }
 
+var config = &Config{}
+
 func init() {
-	rootCmd.Flags().StringP("name", "", "", "name for the user")
 	rootCmd.Flags().BoolP("debug", "", false, "debug option")
+
+	binder := &flagstruct.Binder{Config: flagstruct.DefaultConfig()}
+	binder.EnvPrefix = "X_"
+	fs := rootCmd.Flags()
+	setenv := binder.Bind(fs, config)
+	if err := setenv(fs); err != nil {
+		panic(err)
+	}
+
+	// TODO: fixme
 	rootCmd.MarkFlagRequired("name") // required flag(s) "name" not set
 }
 
