@@ -3,7 +3,6 @@ package flagstruct
 import (
 	"encoding"
 	"fmt"
-	"log"
 	"os"
 	"reflect"
 	"strconv"
@@ -104,11 +103,6 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 
 	binder.walk(fs, rt, rv, "")
 
-	// for shared common option
-	if len(binder.State.embeddedStructPointerMap) > 0 {
-		binder.setSharedCommonEmbeddedStruct()
-	}
-
 	return &FlagSet{FlagSet: fs, Binder: binder}
 }
 
@@ -140,7 +134,9 @@ func (b *Binder) Bind(fs *flag.FlagSet, o interface{}) func(*flag.FlagSet) error
 
 	// for shared common option
 	if len(b.State.embeddedStructPointerMap) > 0 {
-		b.setSharedCommonEmbeddedStruct()
+		if err := b.setSharedCommonEmbeddedStruct(); err != nil {
+			return func(*flag.FlagSet) error { return err }
+		}
 	}
 	return b.setByEnvvars
 }
@@ -157,17 +153,17 @@ func (b *Binder) setByEnvvars(fs *flag.FlagSet) (retErr error) {
 	return retErr
 }
 
-func (b *Binder) setSharedCommonEmbeddedStruct() {
+func (b *Binder) setSharedCommonEmbeddedStruct() error {
 	for ft, fvs := range b.State.embeddedStructPointerMap {
 		base, ok := b.State.toplevelStructMap[ft.Elem()]
 		if !ok {
-			log.Printf("shared common option is not found (%v)", ft.Elem())
-			continue
+			return fmt.Errorf("shared common option is not found (%v)", ft.Elem())
 		}
 		for _, fv := range fvs {
 			fv.Set(base.Addr())
 		}
 	}
+	return nil
 }
 
 func (b *Binder) AllRequiredFlagNames() []string {
@@ -430,8 +426,17 @@ func (fs *FlagSet) Parse(args []string) error {
 	if err := fs.FlagSet.Parse(args); err != nil {
 		return err
 	}
+
+	// for envar
 	if fs.Binder.EnvvarSupport {
 		if err := fs.Binder.setByEnvvars(fs.FlagSet); err != nil {
+			return err
+		}
+	}
+
+	// for shared common option
+	if len(fs.Binder.State.embeddedStructPointerMap) > 0 {
+		if err := fs.Binder.setSharedCommonEmbeddedStruct(); err != nil {
 			return err
 		}
 	}
