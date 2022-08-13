@@ -49,3 +49,9 @@ GO ?= go
 	@echo ---
 	$(GO) run $(shell echo $@*/)main.go # ng
 
+08:
+	$(GO) run $(shell echo $@*/)main.go --help || :
+	@echo ---
+	$(GO) run $(shell echo $@*/)main.go --a.name aaa --b.verbose
+	@echo ---
+	$(GO) run $(shell echo $@*/)main.go --a.name aaa --b.verbose --debug
