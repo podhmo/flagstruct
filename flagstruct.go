@@ -3,6 +3,7 @@ package flagstruct
 import (
 	"encoding"
 	"fmt"
+	"log"
 	"os"
 	"reflect"
 	"strconv"
@@ -98,7 +99,16 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 	fs := flag.NewFlagSet(name, b.HandlingMode)
 
 	binder := &Binder{Config: b.Config}
+	binder.State.toplevelStructMap = map[reflect.Type]reflect.Value{}
+	binder.State.embeddedStructPointerMap = map[reflect.Type][]reflect.Value{}
+
 	binder.walk(fs, rt, rv, "")
+
+	// for shared common option
+	if len(binder.State.embeddedStructPointerMap) > 0 {
+		binder.setSharedCommonEmbeddedStruct()
+	}
+
 	return &FlagSet{FlagSet: fs, Binder: binder}
 }
 
@@ -107,6 +117,9 @@ type Binder struct {
 
 	State struct {
 		visitedFields []fieldcontext
+
+		toplevelStructMap        map[reflect.Type]reflect.Value
+		embeddedStructPointerMap map[reflect.Type][]reflect.Value
 	}
 }
 
@@ -120,7 +133,15 @@ func (b *Binder) Bind(fs *flag.FlagSet, o interface{}) func(*flag.FlagSet) error
 	rt = rt.Elem()
 	rv = rv.Elem()
 
+	b.State.toplevelStructMap = map[reflect.Type]reflect.Value{}
+	b.State.embeddedStructPointerMap = map[reflect.Type][]reflect.Value{}
+
 	b.walk(fs, rt, rv, "")
+
+	// for shared common option
+	if len(b.State.embeddedStructPointerMap) > 0 {
+		b.setSharedCommonEmbeddedStruct()
+	}
 	return b.setByEnvvars
 }
 
@@ -134,6 +155,19 @@ func (b *Binder) setByEnvvars(fs *flag.FlagSet) (retErr error) {
 		}
 	})
 	return retErr
+}
+
+func (b *Binder) setSharedCommonEmbeddedStruct() {
+	for ft, fvs := range b.State.embeddedStructPointerMap {
+		base, ok := b.State.toplevelStructMap[ft.Elem()]
+		if !ok {
+			log.Printf("shared common option is not found (%v)", ft.Elem())
+			continue
+		}
+		for _, fv := range fvs {
+			fv.Set(base.Addr())
+		}
+	}
 }
 
 func (b *Binder) AllRequiredFlagNames() []string {
@@ -275,12 +309,22 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 		if fv.IsNil() && fv.CanAddr() {
 			// flagname is not found, will be skipped (even if the field is a pointer, with field tag, it will be treated as a flag forcely).
 			if !c.hasFlagname {
+				if c.field.Anonymous {
+					// for shared common option (child)
+					typ := c.field.Type
+					b.State.embeddedStructPointerMap[typ] = append(b.State.embeddedStructPointerMap[typ], fv)
+				}
 				return
 			}
 			fv.Set(reflect.New(rt.Elem()))
 		}
 		b.walkField(fs, rt.Elem(), fv.Elem(), c)
 	case reflect.Struct:
+		if c.prefix == "" {
+			// for shared common option (parent)
+			b.State.toplevelStructMap[fv.Type()] = fv
+		}
+
 		if c.field.Anonymous {
 			b.walk(fs, rt, fv, c.prefix)
 			return
