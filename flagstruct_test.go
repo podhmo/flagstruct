@@ -356,6 +356,34 @@ func TestBuilder_Build(t *testing.T) {
 			},
 			errorString: "unknown flag: --zero.name",
 		},
+		{
+			name: "nested--common-option",
+			args: []string{"--debug", "--a.name", "a"},
+			want: `{"Debug":true,"A":{"Debug":true,"Name":"a"},"B":{"Debug":true,"Name":"default"}}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type BaseConfig struct {
+					Debug bool `flag:"debug"`
+				}
+
+				type Options struct {
+					A struct {
+						*BaseConfig
+						Name string `flag:"name"`
+					} `flag:"a"`
+					B struct {
+						*BaseConfig
+						Name string `flag:"name"`
+					} `flag:"b"`
+					BaseConfig
+				}
+				b := newBuilder()
+				defaultName := "default"
+				options := &Options{}
+				options.A.Name = defaultName
+				options.B.Name = defaultName
+				return b, options
+			},
+		},
 
 		// MEMO: []struct[T] is impossible. maybe.
 		// {
