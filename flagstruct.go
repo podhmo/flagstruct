@@ -470,6 +470,12 @@ func Parse[T any](o *T, options ...func(*Builder)) {
 	ParseArgs(o, args, options...)
 }
 
+func WithMoreFlagnameTags(tags ...string) func(b *Builder) {
+	return func(b *Builder) {
+		b.FlagnameTags = append(b.FlagnameTags, tags...)
+	}
+}
+
 func PrintHelpAndExitIfError(fs *flag.FlagSet, err error, code int) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %+v\n", err)
