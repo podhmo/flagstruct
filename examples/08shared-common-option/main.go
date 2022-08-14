@@ -28,9 +28,7 @@ type Config struct {
 
 func main() {
 	config := &Config{}
-	flagstruct.Parse(config, func(b *flagstruct.Builder) {
-		b.FlagnameTags = append(b.FlagnameTags, "json")
-	})
+	flagstruct.Parse(config, flagstruct.WithMoreFlagnameTags("json"))
 
 	enc := json.NewEncoder(os.Stdout)
 	enc.SetIndent("", "  ")
