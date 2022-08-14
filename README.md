@@ -6,7 +6,7 @@ define flagset with struct and reflect
 
 - Builds pflag.FlagSet by struct definition
 - Supports only a single use case (shorthand of flag package)
-- Nested structure support ([example](./examples/03nested/main.go))
+- Nested structure support ([example](./examples/03nested/), [shared common option](./examples/08shared-common-option/))
 - Default envvar support
 
 ## install
