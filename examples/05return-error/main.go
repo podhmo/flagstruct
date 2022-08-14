@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/podhmo/flagstruct"
+	"github.com/spf13/pflag"
 )
 
 type Options struct {
@@ -15,8 +16,12 @@ type Options struct {
 
 func main() {
 	options := &Options{Value: 10} // default value
-	fs := flagstruct.Build(options, flagstruct.WithContinueOnError, func(b *flagstruct.Builder) {
+	fs := flagstruct.Build(options, func(b *flagstruct.Builder) {
 		b.Name = "hello"
+
+		if b.HandlingMode != pflag.ContinueOnError {
+			panic("unexpected handling mode")
+		}
 	})
 
 	if err := fs.Parse(os.Args[1:]); err != nil {
