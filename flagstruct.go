@@ -446,6 +446,7 @@ func (fs *FlagSet) Parse(args []string) error {
 
 func Build[T any](o *T, options ...func(*Builder)) *FlagSet {
 	b := NewBuilder()
+	b.HandlingMode = flag.ContinueOnError
 	for _, opt := range options {
 		opt(b)
 	}
@@ -453,7 +454,12 @@ func Build[T any](o *T, options ...func(*Builder)) *FlagSet {
 }
 
 func ParseArgs[T any](o *T, args []string, options ...func(*Builder)) {
-	fs := Build(o, options...)
+	b := NewBuilder()
+	b.HandlingMode = flag.ExitOnError
+	for _, opt := range options {
+		opt(b)
+	}
+	fs := b.Build(o)
 	if err := fs.Parse(args); err != nil { // never error in fs.FlagSet.Parse(), because default handling mode is not ContinueOnError
 		PrintHelpAndExitIfError(fs.FlagSet, err, 2)
 	}
@@ -461,14 +467,7 @@ func ParseArgs[T any](o *T, args []string, options ...func(*Builder)) {
 
 func Parse[T any](o *T, options ...func(*Builder)) {
 	args := os.Args[1:]
-	fs := Build(o, options...)
-	if err := fs.Parse(args); err != nil { // never error in fs.FlagSet.Parse(), because default handling mode is not ContinueOnError
-		PrintHelpAndExitIfError(fs.FlagSet, err, 2)
-	}
-}
-
-func WithContinueOnError(b *Builder) {
-	b.HandlingMode = flag.ContinueOnError
+	ParseArgs(o, args, options...)
 }
 
 func PrintHelpAndExitIfError(fs *flag.FlagSet, err error, code int) {
