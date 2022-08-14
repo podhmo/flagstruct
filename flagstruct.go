@@ -471,6 +471,12 @@ func WithContinueOnError(b *Builder) {
 	b.HandlingMode = flag.ContinueOnError
 }
 
+func WithMoreFlagnameTags(tags ...string) func(b *Builder) {
+	return func(b *Builder) {
+		b.FlagnameTags = append(b.FlagnameTags, tags...)
+	}
+}
+
 func PrintHelpAndExitIfError(fs *flag.FlagSet, err error, code int) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %+v\n", err)
