@@ -58,7 +58,7 @@ func init() {
 	}
 
 	for _, requiredName := range binder.AllRequiredFlagNames() {
-		cobra.MarkFlagRequired(fs, requiredName) // e.g. required flag(s) "name" not set
+		rootCmd.MarkFlagRequired(requiredName) // e.g. required flag(s) "name" not set
 	}
 }
 
