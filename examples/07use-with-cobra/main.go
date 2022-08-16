@@ -10,7 +10,8 @@ import (
 )
 
 type Config struct {
-	Name string `json:"name" flag:"name" required:"true" help:"name for the user"`
+	Name        string `json:"name" flag:"name" required:"true" help:"name for the user"`
+	Completions bool   `flag:"completions"`
 }
 
 var debug bool
@@ -28,6 +29,12 @@ var rootCmd = &cobra.Command{
 	hello world`,
 
 	Run: func(cmd *cobra.Command, args []string) {
+		// completions
+		if config.Completions {
+			cmd.GenBashCompletionV2(os.Stdout, true /* includeDesc */)
+			return
+		}
+
 		enc := json.NewEncoder(os.Stdout)
 		enc.Encode(map[string]interface{}{
 			"debug":  debug,
