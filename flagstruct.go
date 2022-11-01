@@ -221,6 +221,15 @@ func (b *Binder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, prefi
 				}
 			}
 		}
+
+		required := false
+		if ok, _ := strconv.ParseBool(rf.Tag.Get(b.RequiredTag)); ok {
+			required = true
+		}
+		if required {
+			helpText = helpText + " [required]"
+		}
+
 		if b.EnvvarSupport {
 			helpText = fmt.Sprintf("ENV: %s\t", b.EnvNameFunc(fieldname)) + helpText
 		}
@@ -230,11 +239,6 @@ func (b *Binder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, prefi
 			if prefix == "" {
 				shorthand = v
 			}
-		}
-
-		required := false
-		if ok, _ := strconv.ParseBool(rf.Tag.Get(b.RequiredTag)); ok {
-			required = true
 		}
 
 		fc := fieldcontext{
