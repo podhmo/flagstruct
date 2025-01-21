@@ -57,6 +57,6 @@ func (v *LogLevel) UnmarshalText(text []byte) error {
 }
 
 // for TextVar (for encoding.TextMarshaler)
-func (v *LogLevel) MarshalText() ([]byte, error) {
-	return []byte(*v), nil
+func (v LogLevel) MarshalText() ([]byte, error) {
+	return []byte(v), nil
 }
