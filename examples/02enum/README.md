@@ -1,4 +1,7 @@
 # 02enum/
+
+enum example
+
 ```console
 go run 02enum/main.go --log-level DEBUG --log-level2 warn
 parsed: &main.Options{Name:"foo", LogLevel:"DEBUG", LogLevel2:(*main.LogLevel)(0xc000098600)}
@@ -13,3 +16,5 @@ Usage of hello:
 invalid argument "foo" for "--log-level" flag: FOO is an invalid value for main.LogLevel
 exit status 2
 ```
+
+more simplified definition with TextVar is [here](./with-textvar)
