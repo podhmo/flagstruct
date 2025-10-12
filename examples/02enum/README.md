@@ -17,4 +17,4 @@ invalid argument "foo" for "--log-level" flag: FOO is an invalid value for main.
 exit status 2
 ```
 
-more simplified definition with TextVar is [here](./with-textvar)
+more simplified definition with TextVar is [here](../04textvar)
