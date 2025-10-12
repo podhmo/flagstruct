@@ -5,13 +5,10 @@ A Go library that automatically builds pflag.FlagSet from struct definitions usi
 ## features
 
 - Automatic flag generation - Builds pflag.FlagSet by struct definition with minimal boilerplate
-- Type-safe - Full type safety with Go structs
 - Nested structure support - Organize flags hierarchically ([example](./examples/03nested/), [shared common option](./examples/08shared-common-option/))
 - Environment variable support - Automatic binding with customizable prefix
-- Rich type support - All basic types, slices, time.Duration, custom types via flag.Value and encoding.TextUnmarshaler
 - Short flags - Define shorthand flags via struct tags
 - Required flags - Mark flags as required with validation
-- Cobra integration - Works seamlessly with Cobra commands ([example](./examples/07use-with-cobra/))
 - Custom help text - Customize help messages via struct tags or interfaces
 
 ## install
