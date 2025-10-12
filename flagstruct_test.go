@@ -1,9 +1,12 @@
 package flagstruct_test
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -22,6 +25,45 @@ func TestBuilder_Build(t *testing.T) {
 		b.HandlingMode = pflag.ContinueOnError
 		return b
 	}
+
+	t.Run("prologue", func(t *testing.T) {
+		type Options struct {
+			_    struct{} `help:"this is prologue"`
+			Name string   `flag:"name"`
+		}
+
+		b := newBuilder()
+		fs := b.Build(&Options{})
+		if fs.Binder.Prologue != "this is prologue" {
+			t.Errorf("got %q", fs.Binder.Prologue)
+		}
+	})
+
+	t.Run("prologue with help", func(t *testing.T) {
+		type Options struct {
+			_    struct{} `help:"this is prologue"`
+			Name string   `flag:"name"`
+		}
+
+		b := newBuilder()
+		fs := b.Build(&Options{})
+
+		// Capture os.Stderr
+		oldStderr := os.Stderr
+		r, w, _ := os.Pipe()
+		os.Stderr = w
+
+		fs.Usage()
+
+		w.Close()
+		os.Stderr = oldStderr
+
+		var buf bytes.Buffer
+		io.Copy(&buf, r)
+		if !strings.Contains(buf.String(), "this is prologue") {
+			t.Errorf("expected prologue in usage output, got %q", buf.String())
+		}
+	})
 
 	normalize := func(t *testing.T, ob interface{}) string {
 		t.Helper()

@@ -103,13 +103,20 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 
 	binder.walk(fs, rt, rv, "")
 
+	if binder.Prologue != "" {
+		fs.Usage = func() {
+			fmt.Fprintf(os.Stderr, "%s\n", binder.Prologue)
+			fs.PrintDefaults()
+		}
+	}
 	return &FlagSet{FlagSet: fs, Binder: binder}
 }
 
 type Binder struct {
 	*Config
 
-	State struct {
+	Prologue string
+	State    struct {
 		visitedFields []fieldcontext
 
 		toplevelStructMap        map[reflect.Type]reflect.Value
@@ -189,6 +196,13 @@ func (b *Binder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, prefi
 	for i := 0; i < rt.NumField(); i++ {
 		rf := rt.Field(i)
 		fv := rv.Field(i)
+
+		if rf.Name == "_" {
+			if v, ok := rf.Tag.Lookup(b.HelpTextTag); ok {
+				b.Prologue = v
+			}
+			continue
+		}
 
 		fieldname := rf.Name
 		hasFlagname := false
@@ -482,9 +496,12 @@ func WithMoreFlagnameTags(tags ...string) func(b *Builder) {
 
 func PrintHelpAndExitIfError(fs *flag.FlagSet, err error, code int) {
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %+v\n", err)
-		fs.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "\n%+v\n", err)
+		fmt.Fprintf(os.Stderr, "Error: %+v\n\n", err)
+		if fs.Usage != nil {
+			fs.Usage()
+		} else {
+			fs.PrintDefaults()
+		}
 		os.Exit(code)
 	}
 }
