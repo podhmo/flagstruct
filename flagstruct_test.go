@@ -307,6 +307,23 @@ func TestBuilder_Build(t *testing.T) {
 			},
 		},
 		{
+			name: "nested--inline",
+			args: []string{"--name", "a", "--debug"},
+			want: `{"X":{"Name":"a","Debug":true}}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type X struct {
+					Name  string `flag:"name"`
+					Debug bool   `flag:"debug"`
+				}
+				type Options struct {
+					X X `flag:",inline"`
+				}
+				b := newBuilder()
+				b.FlagnameTags = append(b.FlagnameTags, "flag")
+				return b, &Options{}
+			},
+		},
+		{
 			name: "nested,pointer",
 			args: []string{"--father.name", "foo"},
 			want: `{"Father": {"Name": "foo"}, "Mother": {"Name": "moo"}, "Zero": {"Name": ""}}`,
@@ -427,7 +444,15 @@ func TestBuilder_Build(t *testing.T) {
 			want := normalizeString(t, tt.want)
 			t.Logf("parsed: %+#v", options)
 
-			if got != want {
+			var gotV, wantV interface{}
+			if err := json.Unmarshal([]byte(got), &gotV); err != nil {
+				t.Fatalf("unexpected error (got) %+v", err)
+			}
+			if err := json.Unmarshal([]byte(want), &wantV); err != nil {
+				t.Fatalf("unexpected error (want) %+v", err)
+			}
+
+			if !reflect.DeepEqual(gotV, wantV) {
 				t.Errorf("Builder.Build() = %v, want %v\nargs = %s", got, want, tt.args)
 			}
 		})

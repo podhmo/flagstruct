@@ -192,6 +192,7 @@ func (b *Binder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, prefi
 
 		fieldname := rf.Name
 		hasFlagname := false
+		inlined := false
 
 		{
 			for j := len(b.FlagnameTags) - 1; j >= 0; j-- {
@@ -203,6 +204,14 @@ func (b *Binder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, prefi
 			if fieldname == "-" {
 				continue
 			}
+
+			parts := strings.Split(fieldname, ",")
+			if len(parts) > 1 {
+				if parts[1] == "inline" {
+					inlined = true
+				}
+			}
+
 			if !hasFlagname && !rf.IsExported() {
 				continue
 			}
@@ -246,6 +255,7 @@ func (b *Binder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, prefi
 			helpText:  helpText,
 			required:  required,
 			shorthand: shorthand,
+			inlined:   inlined,
 
 			prefix:      prefix,
 			hasFlagname: hasFlagname,
@@ -262,6 +272,7 @@ type fieldcontext struct {
 	helpText  string
 	shorthand string
 	required  bool
+	inlined   bool
 
 	prefix      string
 	hasFlagname bool
@@ -325,7 +336,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 			b.State.toplevelStructMap[fv.Type()] = fv
 		}
 
-		if c.field.Anonymous {
+		if c.field.Anonymous || c.inlined {
 			b.walk(fs, rt, fv, c.prefix)
 			return
 		}
