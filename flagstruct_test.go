@@ -292,6 +292,21 @@ func TestBuilder_Build(t *testing.T) {
 			},
 		},
 		{
+			name: "nested,embedded",
+			args: []string{"--name", "foo"},
+			want: `{"Name": "foo"}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type Person struct {
+					Name string `flag:"name"`
+				}
+				type Options struct {
+					Person
+				}
+				b := newBuilder()
+				return b, &Options{}
+			},
+		},
+		{
 			name: "nested--inline",
 			args: []string{"--name", "a", "--debug"},
 			want: `{"X":{"Name":"a","Debug":true}}`,
