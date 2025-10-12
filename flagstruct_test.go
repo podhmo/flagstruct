@@ -384,6 +384,22 @@ func TestBuilder_Build(t *testing.T) {
 				return b, options
 			},
 		},
+		{
+			name: "nested--inline",
+			args: []string{"--name", "a", "--debug"},
+			want: `{"X":{"Name":"a","Debug":true}}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type X struct {
+					Name  string `flag:"name"`
+					Debug bool   `flag:"debug"`
+				}
+				type Options struct {
+					X X `inline:"true"`
+				}
+				b := newBuilder()
+				return b, &Options{}
+			},
+		},
 
 		// MEMO: []struct[T] is impossible. maybe.
 		// {
@@ -427,7 +443,15 @@ func TestBuilder_Build(t *testing.T) {
 			want := normalizeString(t, tt.want)
 			t.Logf("parsed: %+#v", options)
 
-			if got != want {
+			var gotV, wantV interface{}
+			if err := json.Unmarshal([]byte(got), &gotV); err != nil {
+				t.Fatalf("unexpected error (got) %+v", err)
+			}
+			if err := json.Unmarshal([]byte(want), &wantV); err != nil {
+				t.Fatalf("unexpected error (want) %+v", err)
+			}
+
+			if !reflect.DeepEqual(gotV, wantV) {
 				t.Errorf("Builder.Build() = %v, want %v\nargs = %s", got, want, tt.args)
 			}
 		})

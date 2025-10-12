@@ -32,6 +32,7 @@ type Config struct {
 	ShorthandTag string
 	HelpTextTag  string
 	RequiredTag  string
+	InlineTag    string
 }
 
 func DefaultConfig() *Config {
@@ -39,6 +40,7 @@ func DefaultConfig() *Config {
 		FlagnameTags:  []string{"flag"},
 		ShorthandTag:  "short",
 		HelpTextTag:   "help",
+		InlineTag:     "inline",
 		RequiredTag:   "required",
 		EnvvarSupport: true,
 		HandlingMode:  flag.ExitOnError,
@@ -329,6 +331,15 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 			b.walk(fs, rt, fv, c.prefix)
 			return
 		}
+
+		// for inline
+		if ok, _ := strconv.ParseBool(c.field.Tag.Get(b.InlineTag)); ok {
+			if fv.CanAddr() {
+				b.walk(fs, rt, fv, c.prefix)
+				return
+			}
+		}
+
 		b.walk(fs, rt, fv, c.prefix+c.fieldname+".")
 	case reflect.Bool:
 		ref := (*bool)(unsafe.Pointer(fv.UnsafeAddr()))
