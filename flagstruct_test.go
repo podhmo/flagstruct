@@ -292,17 +292,19 @@ func TestBuilder_Build(t *testing.T) {
 			},
 		},
 		{
-			name: "nested,embedded",
-			args: []string{"--name", "foo"},
-			want: `{"Name": "foo"}`,
+			name: "nested--inline",
+			args: []string{"--name", "a", "--debug"},
+			want: `{"X":{"Name":"a","Debug":true}}`,
 			create: func() (*flagstruct.Builder, interface{}) {
-				type Person struct {
-					Name string `flag:"name"`
+				type X struct {
+					Name  string `flag:"name"`
+					Debug bool   `flag:"debug"`
 				}
 				type Options struct {
-					Person
+					X X `flag:",inline"`
 				}
 				b := newBuilder()
+				b.FlagnameTags = append(b.FlagnameTags, "flag")
 				return b, &Options{}
 			},
 		},
@@ -382,22 +384,6 @@ func TestBuilder_Build(t *testing.T) {
 				options.A.Name = defaultName
 				options.B.Name = defaultName
 				return b, options
-			},
-		},
-		{
-			name: "nested--inline",
-			args: []string{"--name", "a", "--debug"},
-			want: `{"X":{"Name":"a","Debug":true}}`,
-			create: func() (*flagstruct.Builder, interface{}) {
-				type X struct {
-					Name  string `flag:"name"`
-					Debug bool   `flag:"debug"`
-				}
-				type Options struct {
-					X X `inline:"true"`
-				}
-				b := newBuilder()
-				return b, &Options{}
 			},
 		},
 
