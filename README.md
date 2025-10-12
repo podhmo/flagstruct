@@ -139,6 +139,16 @@ type Options struct {
 }
 ```
 
+### `envname` tag
+Specifies a custom environment variable name for a flag.
+
+```go
+type Options struct {
+    // This flag will be bound to the `MY_APP_PORT` environment variable
+    Port int `flag:"port" envname:"MY_APP_PORT" help:"Server port number"`
+}
+```
+
 ## Advanced usage
 
 ### Nested structures
@@ -288,7 +298,9 @@ if err := fs.Parse(os.Args[1:]); err != nil {
 
 ### Environment variables
 
-Environment variables are automatically supported with customizable prefix:
+Environment variables are automatically supported with a customizable prefix. Command-line arguments take precedence over environment variables.
+
+You can customize the environment variable name for a specific field using the `envname` tag.
 
 ```go
 flagstruct.Parse(options, func(b *flagstruct.Builder) {
@@ -296,7 +308,7 @@ flagstruct.Parse(options, func(b *flagstruct.Builder) {
 })
 ```
 
-Flag names are converted to environment variable names by:
+If `envname` tag is not provided, flag names are converted to environment variable names by:
 1. Converting to uppercase
 2. Replacing `-` and `.` with `_`
 3. Adding the prefix

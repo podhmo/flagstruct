@@ -18,7 +18,7 @@ func TestBuilder_Build(t *testing.T) {
 		b.Name = "-"
 		b.FlagnameTags = []string{"flag"}
 		b.ShorthandTag = "short"
-		b.EnvvarSupport = false
+		// b.EnvvarSupport = false
 		b.HandlingMode = pflag.ContinueOnError
 		return b
 	}
@@ -418,6 +418,51 @@ func TestBuilder_Build(t *testing.T) {
 		// 		return b, &Options{People: []Person{{Name: "moo"}}}
 		// 	},
 		// },
+		{
+			name: "env--override-by-args",
+			args: []string{"--name", "via-args"},
+			want: `{"Name":"via-args"}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				t.Setenv("X_NAME", "via-env")
+				type Options struct {
+					Name string `flag:"name"`
+				}
+				b := newBuilder()
+				b.EnvPrefix = "X_"
+				b.EnvvarSupport = true
+				return b, &Options{}
+			},
+		},
+		{
+			name: "env--from-env",
+			args: []string{},
+			want: `{"Name":"via-env"}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				t.Setenv("X_NAME", "via-env")
+				type Options struct {
+					Name string `flag:"name"`
+				}
+				b := newBuilder()
+				b.EnvPrefix = "X_"
+				b.EnvvarSupport = true
+				return b, &Options{}
+			},
+		},
+		{
+			name: "env--from-env-with-envname-tag",
+			args: []string{},
+			want: `{"Name":"via-env"}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				t.Setenv("MY_NAME", "via-env")
+				type Options struct {
+					Name string `flag:"name" envname:"MY_NAME"`
+				}
+				b := newBuilder()
+				b.EnvPrefix = "X_"
+				b.EnvvarSupport = true
+				return b, &Options{}
+			},
+		},
 	}
 
 	for _, tt := range tests {

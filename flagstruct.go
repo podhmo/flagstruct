@@ -32,6 +32,7 @@ type Config struct {
 	ShorthandTag string
 	HelpTextTag  string
 	RequiredTag  string
+	EnvnameTag   string
 }
 
 func DefaultConfig() *Config {
@@ -40,6 +41,7 @@ func DefaultConfig() *Config {
 		ShorthandTag:  "short",
 		HelpTextTag:   "help",
 		RequiredTag:   "required",
+		EnvnameTag:    "envname",
 		EnvvarSupport: true,
 		HandlingMode:  flag.ExitOnError,
 	}
@@ -100,6 +102,7 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 	binder := &Binder{Config: b.Config}
 	binder.State.toplevelStructMap = map[reflect.Type]reflect.Value{}
 	binder.State.embeddedStructPointerMap = map[reflect.Type][]reflect.Value{}
+	binder.State.flagToEnvMap = map[string]string{}
 
 	binder.walk(fs, rt, rv, "")
 
@@ -114,6 +117,7 @@ type Binder struct {
 
 		toplevelStructMap        map[reflect.Type]reflect.Value
 		embeddedStructPointerMap map[reflect.Type][]reflect.Value
+		flagToEnvMap             map[string]string
 	}
 }
 
@@ -129,6 +133,7 @@ func (b *Binder) Bind(fs *flag.FlagSet, o interface{}) func(*flag.FlagSet) error
 
 	b.State.toplevelStructMap = map[reflect.Type]reflect.Value{}
 	b.State.embeddedStructPointerMap = map[reflect.Type][]reflect.Value{}
+	b.State.flagToEnvMap = map[string]string{}
 
 	b.walk(fs, rt, rv, "")
 
@@ -143,7 +148,15 @@ func (b *Binder) Bind(fs *flag.FlagSet, o interface{}) func(*flag.FlagSet) error
 
 func (b *Binder) setByEnvvars(fs *flag.FlagSet) (retErr error) {
 	fs.VisitAll(func(f *flag.Flag) {
-		envname := b.EnvNameFunc(f.Name)
+		if f.Changed {
+			return
+		}
+
+		envname, ok := b.State.flagToEnvMap[f.Name]
+		if !ok || envname == "" {
+			envname = b.EnvNameFunc(f.Name)
+		}
+
 		if v, ok := os.LookupEnv(envname); ok {
 			if err := fs.Set(f.Name, v); err != nil {
 				retErr = fmt.Errorf("on envvar %s=%v, %+v", envname, v, err)
@@ -239,8 +252,18 @@ func (b *Binder) walk(fs *flag.FlagSet, rt reflect.Type, rv reflect.Value, prefi
 			helpText = helpText + " [required]"
 		}
 
+		envname := ""
+		if v, ok := rf.Tag.Lookup(b.EnvnameTag); ok {
+			envname = v
+		}
+		b.State.flagToEnvMap[fieldname] = envname
+
 		if b.EnvvarSupport {
-			helpText = fmt.Sprintf("ENV: %s\t", b.EnvNameFunc(fieldname)) + helpText
+			displayEnvname := envname
+			if displayEnvname == "" {
+				displayEnvname = b.EnvNameFunc(fieldname)
+			}
+			helpText = fmt.Sprintf("ENV: %s\t", displayEnvname) + helpText
 		}
 
 		shorthand := ""
