@@ -3,19 +3,19 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"net"
+	"log/slog"
 	"os"
 
 	"github.com/podhmo/flagstruct"
 )
 
 type Options struct {
-	IP  *net.IP `flag:"ip"`
-	IP2 net.IP  `flag:"ip2"`
+	LogLevel  slog.Level  `flag:"log-level" help:"log level  {DEBUG, INFO, WARN, ERROR}"`
+	LogLevel2 *slog.Level `flag:"log-level2" help:"log level  {DEBUG, INFO, WARN, ERROR}"`
 }
 
 func main() {
-	options := &Options{IP2: net.IPv4(0, 0, 0, 1)} // default value
+	options := &Options{LogLevel: slog.LevelInfo} // default value
 
 	flagstruct.Parse(options, func(b *flagstruct.Builder) {
 		b.Name = "textvar"
