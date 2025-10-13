@@ -15,7 +15,9 @@ type Options struct {
 }
 
 func main() {
-	options := &Options{Value: 10} // default value
+	options := &Options{
+		Value: 10, // default value
+	}
 	fs := flagstruct.Build(options, func(b *flagstruct.Builder) {
 		b.Name = "hello"
 
@@ -28,5 +30,15 @@ func main() {
 		log.Fatalf("hmm: %+v", err)
 	}
 
-	fmt.Printf("parsed: %#+v\n", options)
+	// custom validation
+	{
+		if options.Value < 0 {
+			flagstruct.PrintHelpAndExitIfError(fs.FlagSet, fmt.Errorf("--value must be non-negative: but got %d", options.Value), 1)
+		}
+	}
+
+	// main logic
+	{
+		fmt.Printf("parsed: %#+v\n", options)
+	}
 }
