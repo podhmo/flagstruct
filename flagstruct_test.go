@@ -651,3 +651,33 @@ func (v *LogLevel) Set(value string) error {
 func (v *LogLevel) Type() string {
 	return "LogLevel"
 }
+
+func TestBuilder_Build_help(t *testing.T) {
+	var b strings.Builder
+	newBuilder := func() *flagstruct.Builder {
+		b := flagstruct.NewBuilder()
+		b.Name = "-"
+		b.FlagnameTags = []string{"flag"}
+		b.ShorthandTag = "short"
+		b.HandlingMode = pflag.ContinueOnError
+		b.Header = "this is header"
+		b.Footer = "this is footer"
+		return b
+	}
+
+	type Options struct {
+		Name string `flag:"name"`
+	}
+	builder, options := newBuilder(), &Options{}
+	fs := builder.Build(options)
+	fs.SetOutput(&b)
+	fs.Usage()
+
+	got := b.String()
+	if !strings.Contains(got, "this is header") {
+		t.Errorf("expected header, but got\n%s", got)
+	}
+	if !strings.Contains(got, "this is footer") {
+		t.Errorf("expected footer, but got\n%s", got)
+	}
+}
