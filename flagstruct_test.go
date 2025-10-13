@@ -47,10 +47,11 @@ func TestBuilder_Build(t *testing.T) {
 	}
 
 	tests := []struct {
-		name   string
-		args   []string
-		want   string
-		create func() (*flagstruct.Builder, interface{})
+		name        string
+		args        []string
+		want        string
+		create      func() (*flagstruct.Builder, interface{})
+		nonFlagArgs []string
 
 		errorString string
 	}{
@@ -622,6 +623,19 @@ func TestBuilder_Build(t *testing.T) {
 			},
 			errorString: `invalid argument "loopback=invalid-ip" for "--ip-map" flag: value "invalid-ip" for key "loopback" is not a valid IP (invalid IP address: invalid-ip)`,
 		},
+		{
+			name: "interspersed",
+			args: []string{"--name", "foo", "bar", "--age", "20"},
+			want: `{"Name":"foo", "Age": 20}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type Options struct {
+					Name string `flag:"name"`
+					Age  int    `flag:"age"`
+				}
+				return newBuilder(), &Options{}
+			},
+			nonFlagArgs: []string{"bar"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -658,6 +672,12 @@ func TestBuilder_Build(t *testing.T) {
 
 			if !reflect.DeepEqual(gotV, wantV) {
 				t.Errorf("Builder.Build() = %v, want %v\nargs = %s", got, want, tt.args)
+			}
+
+			if tt.nonFlagArgs != nil {
+				if !reflect.DeepEqual(fs.Args(), tt.nonFlagArgs) {
+					t.Errorf("fs.Args() = %v, want %v", fs.Args(), tt.nonFlagArgs)
+				}
 			}
 		})
 	}
