@@ -92,6 +92,16 @@ Slice types:
 - `[]float64`
 - `[]time.Duration`
 
+Map types:
+- `map[string]string`
+- `map[string]bool`
+- `map[string]int`, `map[string]int64`
+- `map[string]uint`, `map[string]uint64`
+- `map[string]float64`
+- `map[string]time.Duration`
+
+Map values are passed as a single comma-separated string of `key=value` pairs. For example: `--metadata project=alpha,owner=john.doe`
+
 Custom types:
 - Types implementing `flag.Value` interface (Set, String, Type methods)
 - Types implementing `encoding.TextUnmarshaler` and `encoding.TextMarshaler` interfaces
