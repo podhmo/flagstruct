@@ -730,6 +730,237 @@ func (v *LogLevel) Type() string {
 	return "LogLevel"
 }
 
+func TestBuilder_Build_required(t *testing.T) {
+	newBuilder := func() *flagstruct.Builder {
+		b := flagstruct.NewBuilder()
+		b.Name = "test"
+		b.FlagnameTags = []string{"flag"}
+		b.HandlingMode = pflag.ContinueOnError
+		return b
+	}
+
+	t.Run("required--int-with-default", func(t *testing.T) {
+		type Options struct {
+			Value int `flag:"value" required:"true"`
+		}
+		options := &Options{Value: 10}
+		builder := newBuilder()
+		fs := builder.Build(options)
+
+		// Should not error when default value is provided
+		err := fs.Parse([]string{})
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if options.Value != 10 {
+			t.Errorf("expected value 10, got %d", options.Value)
+		}
+	})
+
+	t.Run("required--int-without-default", func(t *testing.T) {
+		type Options struct {
+			Value int `flag:"value" required:"true"`
+		}
+		options := &Options{}
+		builder := newBuilder()
+		fs := builder.Build(options)
+
+		// Should error when no default value and no flag provided
+		err := fs.Parse([]string{})
+		if err == nil {
+			t.Error("expected error but got none")
+		}
+		if !strings.Contains(err.Error(), "required flag") {
+			t.Errorf("expected 'required flag' error, got: %v", err)
+		}
+	})
+
+	t.Run("required--int-explicit-value", func(t *testing.T) {
+		type Options struct {
+			Value int `flag:"value" required:"true"`
+		}
+		options := &Options{Value: 10}
+		builder := newBuilder()
+		fs := builder.Build(options)
+
+		// Should accept explicit value
+		err := fs.Parse([]string{"--value", "20"})
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if options.Value != 20 {
+			t.Errorf("expected value 20, got %d", options.Value)
+		}
+	})
+
+	t.Run("required--string-with-default", func(t *testing.T) {
+		type Options struct {
+			Name string `flag:"name" required:"true"`
+		}
+		options := &Options{Name: "default-name"}
+		builder := newBuilder()
+		fs := builder.Build(options)
+
+		// Should not error when default value is provided
+		err := fs.Parse([]string{})
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if options.Name != "default-name" {
+			t.Errorf("expected name 'default-name', got %s", options.Name)
+		}
+	})
+
+	t.Run("required--string-without-default", func(t *testing.T) {
+		type Options struct {
+			Name string `flag:"name" required:"true"`
+		}
+		options := &Options{}
+		builder := newBuilder()
+		fs := builder.Build(options)
+
+		// Should error when no default value and no flag provided
+		err := fs.Parse([]string{})
+		if err == nil {
+			t.Error("expected error but got none")
+		}
+		if !strings.Contains(err.Error(), "required flag") {
+			t.Errorf("expected 'required flag' error, got: %v", err)
+		}
+	})
+
+	t.Run("required--bool-with-default-true", func(t *testing.T) {
+		type Options struct {
+			Flag bool `flag:"flag" required:"true"`
+		}
+		options := &Options{Flag: true}
+		builder := newBuilder()
+		fs := builder.Build(options)
+
+		// Should not error when default value is true
+		err := fs.Parse([]string{})
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if !options.Flag {
+			t.Error("expected flag to be true")
+		}
+	})
+
+	t.Run("required--bool-without-default", func(t *testing.T) {
+		type Options struct {
+			Flag bool `flag:"flag" required:"true"`
+		}
+		options := &Options{}
+		builder := newBuilder()
+		fs := builder.Build(options)
+
+		// Should error when no default value (false is zero value)
+		err := fs.Parse([]string{})
+		if err == nil {
+			t.Error("expected error but got none")
+		}
+		if !strings.Contains(err.Error(), "required flag") {
+			t.Errorf("expected 'required flag' error, got: %v", err)
+		}
+	})
+
+	t.Run("required--float64-with-default", func(t *testing.T) {
+		type Options struct {
+			Rate float64 `flag:"rate" required:"true"`
+		}
+		options := &Options{Rate: 1.5}
+		builder := newBuilder()
+		fs := builder.Build(options)
+
+		// Should not error when default value is provided
+		err := fs.Parse([]string{})
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if options.Rate != 1.5 {
+			t.Errorf("expected rate 1.5, got %f", options.Rate)
+		}
+	})
+
+	t.Run("required--int64-with-default", func(t *testing.T) {
+		type Options struct {
+			Value int64 `flag:"value" required:"true"`
+		}
+		options := &Options{Value: 100}
+		builder := newBuilder()
+		fs := builder.Build(options)
+
+		// Should not error when default value is provided
+		err := fs.Parse([]string{})
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if options.Value != 100 {
+			t.Errorf("expected value 100, got %d", options.Value)
+		}
+	})
+
+	t.Run("required--uint-with-default", func(t *testing.T) {
+		type Options struct {
+			Value uint `flag:"value" required:"true"`
+		}
+		options := &Options{Value: 50}
+		builder := newBuilder()
+		fs := builder.Build(options)
+
+		// Should not error when default value is provided
+		err := fs.Parse([]string{})
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if options.Value != 50 {
+			t.Errorf("expected value 50, got %d", options.Value)
+		}
+	})
+
+	t.Run("required--multiple-flags-mixed", func(t *testing.T) {
+		type Options struct {
+			Name     string `flag:"name" required:"true"`
+			Age      int    `flag:"age" required:"true"`
+			Optional string `flag:"optional"`
+		}
+		options := &Options{Name: "default", Age: 25}
+		builder := newBuilder()
+		fs := builder.Build(options)
+
+		// Should not error when all required flags have defaults
+		err := fs.Parse([]string{})
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if options.Name != "default" {
+			t.Errorf("expected name 'default', got %s", options.Name)
+		}
+		if options.Age != 25 {
+			t.Errorf("expected age 25, got %d", options.Age)
+		}
+	})
+
+	t.Run("required--override-default", func(t *testing.T) {
+		type Options struct {
+			Value int `flag:"value" required:"true"`
+		}
+		options := &Options{Value: 10}
+		builder := newBuilder()
+		fs := builder.Build(options)
+
+		// Should accept explicit value that overrides default
+		err := fs.Parse([]string{"--value", "99"})
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+		}
+		if options.Value != 99 {
+			t.Errorf("expected value 99, got %d", options.Value)
+		}
+	})
+}
+
 func TestBuilder_Build_help(t *testing.T) {
 	var b strings.Builder
 	newBuilder := func() *flagstruct.Builder {
