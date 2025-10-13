@@ -310,48 +310,6 @@ options: &main.Options{Name:"foo", Verbose:true}
 args: [arg1 arg2]
 ```
 
-### Custom types with flag.Value
-
-Implement the `flag.Value` interface for custom types:
-
-```go
-type LogLevel string
-
-const (
-    LogLevelDebug LogLevel = "DEBUG"
-    LogLevelInfo  LogLevel = "INFO"
-    LogLevelWarn  LogLevel = "WARN"
-    LogLevelError LogLevel = "ERROR"
-)
-
-func (v *LogLevel) String() string {
-    return string(*v)
-}
-
-func (v *LogLevel) Set(value string) error {
-    *v = LogLevel(strings.ToUpper(value))
-    switch *v {
-    case LogLevelDebug, LogLevelInfo, LogLevelWarn, LogLevelError:
-        return nil
-    default:
-        return fmt.Errorf("invalid log level: %s", value)
-    }
-}
-
-func (v *LogLevel) Type() string {
-    return "LogLevel"
-}
-
-// Optional: implement HasHelpText for custom help message
-func (v LogLevel) HelpText() string {
-    return "log level {DEBUG, INFO, WARN, ERROR}"
-}
-
-type Options struct {
-    LogLevel LogLevel `flag:"log-level"`
-}
-```
-
 ### Using with Cobra
 
 flagstruct works seamlessly with Cobra commands:
