@@ -205,8 +205,19 @@ func (b *Binder) AllRequiredFlagNames() []string {
 
 func (b *Binder) ValidateRequiredFlags(fs *flag.FlagSet) error {
 	for _, requiredName := range b.AllRequiredFlagNames() {
-		if !fs.Lookup(requiredName).Changed {
-			return fmt.Errorf("required flag(s) %q not set", requiredName)
+		f := fs.Lookup(requiredName)
+		// A required flag is satisfied if:
+		// 1. It was explicitly set by the user (Changed == true), OR
+		// 2. It has a non-zero default value (DefValue != zero for that type)
+		if !f.Changed {
+			// Check if DefValue is a zero value for common types
+			// For numeric types, "0" means no default was set
+			// For strings, "" means no default was set
+			// For booleans, "false" means no default was set
+			isZeroValue := f.DefValue == "0" || f.DefValue == "" || f.DefValue == "false"
+			if isZeroValue {
+				return fmt.Errorf("required flag(s) %q not set", requiredName)
+			}
 		}
 	}
 	return nil
