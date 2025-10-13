@@ -379,31 +379,71 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 		}
 		b.walk(fs, rt, fv, c.prefix+c.fieldname+".")
 	case reflect.Bool:
-		ref := (*bool)(unsafe.Pointer(fv.UnsafeAddr()))
+		var ref *bool
+		if c.field.IsExported() {
+			ref = fv.Addr().Interface().(*bool)
+		} else {
+			ref = (*bool)(unsafe.Pointer(fv.UnsafeAddr()))
+		}
 		fs.BoolVarP(ref, c.fieldname, c.shorthand, fv.Bool(), c.helpText)
 	case reflect.Float64:
-		ref := (*float64)(unsafe.Pointer(fv.UnsafeAddr()))
+		var ref *float64
+		if c.field.IsExported() {
+			ref = fv.Addr().Interface().(*float64)
+		} else {
+			ref = (*float64)(unsafe.Pointer(fv.UnsafeAddr()))
+		}
 		fs.Float64VarP(ref, c.fieldname, c.shorthand, fv.Float(), c.helpText)
 	case reflect.Int64:
 		switch rt {
 		case rTimeDurationType:
-			ref := (*time.Duration)(unsafe.Pointer(fv.UnsafeAddr()))
+			var ref *time.Duration
+			if c.field.IsExported() {
+				ref = fv.Addr().Interface().(*time.Duration)
+			} else {
+				ref = (*time.Duration)(unsafe.Pointer(fv.UnsafeAddr()))
+			}
 			fs.DurationVarP(ref, c.fieldname, c.shorthand, time.Duration(fv.Int()), c.helpText)
 		default:
-			ref := (*int64)(unsafe.Pointer(fv.UnsafeAddr()))
+			var ref *int64
+			if c.field.IsExported() {
+				ref = fv.Addr().Interface().(*int64)
+			} else {
+				ref = (*int64)(unsafe.Pointer(fv.UnsafeAddr()))
+			}
 			fs.Int64VarP(ref, c.fieldname, c.shorthand, fv.Int(), c.helpText)
 		}
 	case reflect.Int:
-		ref := (*int)(unsafe.Pointer(fv.UnsafeAddr()))
+		var ref *int
+		if c.field.IsExported() {
+			ref = fv.Addr().Interface().(*int)
+		} else {
+			ref = (*int)(unsafe.Pointer(fv.UnsafeAddr()))
+		}
 		fs.IntVarP(ref, c.fieldname, c.shorthand, int(fv.Int()), c.helpText)
 	case reflect.String:
-		ref := (*string)(unsafe.Pointer(fv.UnsafeAddr()))
+		var ref *string
+		if c.field.IsExported() {
+			ref = fv.Addr().Interface().(*string)
+		} else {
+			ref = (*string)(unsafe.Pointer(fv.UnsafeAddr()))
+		}
 		fs.StringVarP(ref, c.fieldname, c.shorthand, fv.String(), c.helpText)
 	case reflect.Uint64:
-		ref := (*uint64)(unsafe.Pointer(fv.UnsafeAddr()))
+		var ref *uint64
+		if c.field.IsExported() {
+			ref = fv.Addr().Interface().(*uint64)
+		} else {
+			ref = (*uint64)(unsafe.Pointer(fv.UnsafeAddr()))
+		}
 		fs.Uint64VarP(ref, c.fieldname, c.shorthand, fv.Uint(), c.helpText)
 	case reflect.Uint:
-		ref := (*uint)(unsafe.Pointer(fv.UnsafeAddr()))
+		var ref *uint
+		if c.field.IsExported() {
+			ref = fv.Addr().Interface().(*uint)
+		} else {
+			ref = (*uint)(unsafe.Pointer(fv.UnsafeAddr()))
+		}
 		fs.UintVarP(ref, c.fieldname, c.shorthand, uint(fv.Uint()), c.helpText)
 	case reflect.Slice:
 		elemType := rt.Elem()
@@ -414,7 +454,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 
 		// special case for time.Duration which is an int64
 		if elemType == rTimeDurationType {
-			ref := (*[]time.Duration)(unsafe.Pointer(fv.UnsafeAddr()))
+			ref := fv.Addr().Interface().(*[]time.Duration)
 			var defaultValue []time.Duration
 			if fv.Len() > 0 {
 				defaultValue = make([]time.Duration, fv.Len())
@@ -428,7 +468,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 
 		switch elemType.Kind() {
 		case reflect.String:
-			ref := (*[]string)(unsafe.Pointer(fv.UnsafeAddr()))
+			ref := fv.Addr().Interface().(*[]string)
 			var defaultValue []string
 			if fv.Len() > 0 {
 				defaultValue = make([]string, fv.Len())
@@ -439,7 +479,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 			fs.VarP(newSliceValue(defaultValue, ref, "string", func(s string) (string, error) { return s, nil }), c.fieldname, c.shorthand, c.helpText)
 			return
 		case reflect.Bool:
-			ref := (*[]bool)(unsafe.Pointer(fv.UnsafeAddr()))
+			ref := fv.Addr().Interface().(*[]bool)
 			var defaultValue []bool
 			if fv.Len() > 0 {
 				defaultValue = make([]bool, fv.Len())
@@ -450,7 +490,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 			fs.VarP(newSliceValue(defaultValue, ref, "bool", strconv.ParseBool), c.fieldname, c.shorthand, c.helpText)
 			return
 		case reflect.Int:
-			ref := (*[]int)(unsafe.Pointer(fv.UnsafeAddr()))
+			ref := fv.Addr().Interface().(*[]int)
 			var defaultValue []int
 			if fv.Len() > 0 {
 				defaultValue = make([]int, fv.Len())
@@ -461,7 +501,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 			fs.VarP(newSliceValue(defaultValue, ref, "int", strconv.Atoi), c.fieldname, c.shorthand, c.helpText)
 			return
 		case reflect.Int64:
-			ref := (*[]int64)(unsafe.Pointer(fv.UnsafeAddr()))
+			ref := fv.Addr().Interface().(*[]int64)
 			var defaultValue []int64
 			if fv.Len() > 0 {
 				defaultValue = make([]int64, fv.Len())
@@ -473,7 +513,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 			fs.VarP(newSliceValue(defaultValue, ref, "int64", parser), c.fieldname, c.shorthand, c.helpText)
 			return
 		case reflect.Uint:
-			ref := (*[]uint)(unsafe.Pointer(fv.UnsafeAddr()))
+			ref := fv.Addr().Interface().(*[]uint)
 			var defaultValue []uint
 			if fv.Len() > 0 {
 				defaultValue = make([]uint, fv.Len())
@@ -488,7 +528,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 			fs.VarP(newSliceValue(defaultValue, ref, "uint", parser), c.fieldname, c.shorthand, c.helpText)
 			return
 		case reflect.Uint64:
-			ref := (*[]uint64)(unsafe.Pointer(fv.UnsafeAddr()))
+			ref := fv.Addr().Interface().(*[]uint64)
 			var defaultValue []uint64
 			if fv.Len() > 0 {
 				defaultValue = make([]uint64, fv.Len())
@@ -500,7 +540,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 			fs.VarP(newSliceValue(defaultValue, ref, "uint64", parser), c.fieldname, c.shorthand, c.helpText)
 			return
 		case reflect.Float64:
-			ref := (*[]float64)(unsafe.Pointer(fv.UnsafeAddr()))
+			ref := fv.Addr().Interface().(*[]float64)
 			var defaultValue []float64
 			if fv.Len() > 0 {
 				defaultValue = make([]float64, fv.Len())
@@ -523,7 +563,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 
 			// special case for time.Duration which is an int64
 			if elemType == rTimeDurationType {
-				ref := (*map[string]time.Duration)(unsafe.Pointer(fv.UnsafeAddr()))
+				ref := fv.Addr().Interface().(*map[string]time.Duration)
 				var defaultValue map[string]time.Duration
 				if fv.Len() > 0 {
 					defaultValue = make(map[string]time.Duration, fv.Len())
@@ -537,7 +577,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 
 			switch elemType.Kind() {
 			case reflect.String:
-				ref := (*map[string]string)(unsafe.Pointer(fv.UnsafeAddr()))
+				ref := fv.Addr().Interface().(*map[string]string)
 				var defaultValue map[string]string
 				if fv.Len() > 0 {
 					defaultValue = make(map[string]string, fv.Len())
@@ -548,7 +588,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 				fs.VarP(newMapValue(defaultValue, ref, "string", func(s string) (string, error) { return s, nil }), c.fieldname, c.shorthand, c.helpText)
 				return
 			case reflect.Bool:
-				ref := (*map[string]bool)(unsafe.Pointer(fv.UnsafeAddr()))
+				ref := fv.Addr().Interface().(*map[string]bool)
 				var defaultValue map[string]bool
 				if fv.Len() > 0 {
 					defaultValue = make(map[string]bool, fv.Len())
@@ -559,7 +599,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 				fs.VarP(newMapValue(defaultValue, ref, "bool", strconv.ParseBool), c.fieldname, c.shorthand, c.helpText)
 				return
 			case reflect.Int:
-				ref := (*map[string]int)(unsafe.Pointer(fv.UnsafeAddr()))
+				ref := fv.Addr().Interface().(*map[string]int)
 				var defaultValue map[string]int
 				if fv.Len() > 0 {
 					defaultValue = make(map[string]int, fv.Len())
@@ -570,7 +610,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 				fs.VarP(newMapValue(defaultValue, ref, "int", strconv.Atoi), c.fieldname, c.shorthand, c.helpText)
 				return
 			case reflect.Int64:
-				ref := (*map[string]int64)(unsafe.Pointer(fv.UnsafeAddr()))
+				ref := fv.Addr().Interface().(*map[string]int64)
 				var defaultValue map[string]int64
 				if fv.Len() > 0 {
 					defaultValue = make(map[string]int64, fv.Len())
@@ -582,7 +622,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 				fs.VarP(newMapValue(defaultValue, ref, "int64", parser), c.fieldname, c.shorthand, c.helpText)
 				return
 			case reflect.Uint:
-				ref := (*map[string]uint)(unsafe.Pointer(fv.UnsafeAddr()))
+				ref := fv.Addr().Interface().(*map[string]uint)
 				var defaultValue map[string]uint
 				if fv.Len() > 0 {
 					defaultValue = make(map[string]uint, fv.Len())
@@ -597,7 +637,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 				fs.VarP(newMapValue(defaultValue, ref, "uint", parser), c.fieldname, c.shorthand, c.helpText)
 				return
 			case reflect.Uint64:
-				ref := (*map[string]uint64)(unsafe.Pointer(fv.UnsafeAddr()))
+				ref := fv.Addr().Interface().(*map[string]uint64)
 				var defaultValue map[string]uint64
 				if fv.Len() > 0 {
 					defaultValue = make(map[string]uint64, fv.Len())
@@ -609,7 +649,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 				fs.VarP(newMapValue(defaultValue, ref, "uint64", parser), c.fieldname, c.shorthand, c.helpText)
 				return
 			case reflect.Float64:
-				ref := (*map[string]float64)(unsafe.Pointer(fv.UnsafeAddr()))
+				ref := fv.Addr().Interface().(*map[string]float64)
 				var defaultValue map[string]float64
 				if fv.Len() > 0 {
 					defaultValue = make(map[string]float64, fv.Len())
