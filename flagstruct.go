@@ -144,6 +144,9 @@ type Config struct {
 	HelpTextTag  string
 	RequiredTag  string
 	EnvnameTag   string
+
+	Header string
+	Footer string
 }
 
 func DefaultConfig() *Config {
@@ -209,6 +212,16 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 		name = rt.Name()
 	}
 	fs := flag.NewFlagSet(name, b.HandlingMode)
+	fs.Usage = func() {
+		if b.Header != "" {
+			fmt.Fprintln(fs.Output(), b.Header)
+		}
+		fmt.Fprintf(fs.Output(), "Usage of %s:\n", name)
+		fs.PrintDefaults()
+		if b.Footer != "" {
+			fmt.Fprintln(fs.Output(), b.Footer)
+		}
+	}
 
 	binder := &Binder{Config: b.Config}
 	binder.State.toplevelStructMap = map[reflect.Type]reflect.Value{}
@@ -777,7 +790,7 @@ func WithMoreFlagnameTags(tags ...string) func(b *Builder) {
 func PrintHelpAndExitIfError(fs *flag.FlagSet, err error, code int) {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %+v\n", err)
-		fs.PrintDefaults()
+		fs.Usage()
 		fmt.Fprintf(os.Stderr, "\n%+v\n", err)
 		os.Exit(code)
 	}
