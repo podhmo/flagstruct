@@ -250,7 +250,7 @@ func (v *textUnmarshalerMapValue) Set(s string) error {
 			}
 		}
 		if err := um.UnmarshalText([]byte(valueStr)); err != nil {
-			return fmt.Errorf("value %q for key %q is not a valid %s", valueStr, key, v.elemTyp.Name())
+			return fmt.Errorf("value %q for key %q is not a valid %s (%v)", valueStr, key, v.elemTyp.Name(), err)
 		}
 		v.value.SetMapIndex(reflect.ValueOf(key), ob.Elem())
 	}

@@ -620,7 +620,7 @@ func TestBuilder_Build(t *testing.T) {
 				}
 				return newBuilder(), &Options{}
 			},
-			errorString: `invalid argument "loopback=invalid-ip" for "--ip-map" flag: value "invalid-ip" for key "loopback" is not a valid IP`,
+			errorString: `invalid argument "loopback=invalid-ip" for "--ip-map" flag: value "invalid-ip" for key "loopback" is not a valid IP (invalid IP address: invalid-ip)`,
 		},
 	}
 
