@@ -130,6 +130,160 @@ func (s *sliceValue[T]) Type() string {
 	return fmt.Sprintf("[]%s", s.valueTypeName)
 }
 
+func textVar[T any, V flag.Value](val T, p *T, c flag.Value) flag.Value {
+	*p = val
+	return c
+}
+
+type textUnmarshalerSliceValue struct {
+	value   reflect.Value // slice
+	elemTyp reflect.Type
+	changed bool
+}
+
+func newTextUnmarshalerSliceValue(v reflect.Value) *textUnmarshalerSliceValue {
+	if v.IsNil() {
+		v.Set(reflect.MakeSlice(v.Type(), 0, 0))
+	}
+	return &textUnmarshalerSliceValue{
+		value:   v,
+		elemTyp: v.Type().Elem(),
+	}
+}
+
+func (v *textUnmarshalerSliceValue) Set(s string) error {
+	if !v.changed {
+		v.value.Set(reflect.MakeSlice(v.value.Type(), 0, 0))
+		v.changed = true
+	}
+
+	parts := strings.Split(s, ",")
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		ob := reflect.New(v.elemTyp)
+		um, ok := ob.Interface().(encoding.TextUnmarshaler)
+		if !ok {
+			// pointer receiver
+			um, ok = ob.Addr().Interface().(encoding.TextUnmarshaler)
+			if !ok {
+				return fmt.Errorf("hmm, %s is not TextUnmarshaler", v.elemTyp)
+			}
+		}
+
+		if err := um.UnmarshalText([]byte(part)); err != nil {
+			return fmt.Errorf("value %q is not a valid %s (%v)", part, v.elemTyp.Name(), err)
+		}
+		v.value.Set(reflect.Append(v.value, ob.Elem()))
+	}
+	return nil
+}
+
+func (v *textUnmarshalerSliceValue) String() string {
+	if v.value.IsNil() {
+		return "[]"
+	}
+
+	parts := make([]string, v.value.Len())
+	for i := 0; i < v.value.Len(); i++ {
+		ob := v.value.Index(i)
+		if ob.CanInterface() {
+			if m, ok := ob.Interface().(encoding.TextMarshaler); ok {
+				b, err := m.MarshalText()
+				if err != nil {
+					parts[i] = fmt.Sprintf("ERR(%v)", err)
+				} else {
+					parts[i] = string(b)
+				}
+				continue
+			}
+		}
+		parts[i] = fmt.Sprintf("%v", ob.Interface())
+	}
+	return "[" + strings.Join(parts, ",") + "]"
+}
+func (v *textUnmarshalerSliceValue) Type() string {
+	return v.elemTyp.Name()
+}
+
+type textUnmarshalerMapValue struct {
+	value   reflect.Value // map
+	elemTyp reflect.Type
+}
+
+func newTextUnmarshalerMapValue(v reflect.Value) *textUnmarshalerMapValue {
+	if v.IsNil() {
+		v.Set(reflect.MakeMap(v.Type()))
+	}
+	return &textUnmarshalerMapValue{
+		value:   v,
+		elemTyp: v.Type().Elem(),
+	}
+}
+
+func (v *textUnmarshalerMapValue) Set(s string) error {
+	if v.value.IsNil() {
+		v.value.Set(reflect.MakeMap(v.value.Type()))
+	}
+	if s == "" {
+		return nil
+	}
+
+	for _, pair := range strings.Split(s, ",") {
+		kv := strings.SplitN(pair, "=", 2)
+		if len(kv) != 2 {
+			return fmt.Errorf("invalid map item: %q", pair)
+		}
+		key := kv[0]
+		valueStr := kv[1]
+
+		ob := reflect.New(v.elemTyp)
+		um, ok := ob.Interface().(encoding.TextUnmarshaler)
+		if !ok {
+			// pointer receiver
+			um, ok = ob.Addr().Interface().(encoding.TextUnmarshaler)
+			if !ok {
+				return fmt.Errorf("hmm, %s is not TextUnmarshaler", v.elemTyp)
+			}
+		}
+		if err := um.UnmarshalText([]byte(valueStr)); err != nil {
+			return fmt.Errorf("value %q for key %q is not a valid %s (%v)", valueStr, key, v.elemTyp.Name(), err)
+		}
+		v.value.SetMapIndex(reflect.ValueOf(key), ob.Elem())
+	}
+	return nil
+}
+
+func (v *textUnmarshalerMapValue) String() string {
+	if v.value.IsNil() {
+		return ""
+	}
+
+	pairs := make([]string, 0, v.value.Len())
+	for _, k := range v.value.MapKeys() {
+		val := v.value.MapIndex(k)
+		if val.CanInterface() {
+			if m, ok := val.Interface().(encoding.TextMarshaler); ok {
+				b, err := m.MarshalText()
+				if err != nil {
+					pairs = append(pairs, fmt.Sprintf("%s=ERR(%v)", k.String(), err))
+				} else {
+					pairs = append(pairs, fmt.Sprintf("%s=%s", k.String(), string(b)))
+				}
+				continue
+			}
+		}
+		pairs = append(pairs, fmt.Sprintf("%s=%v", k.String(), val.Interface()))
+	}
+	return strings.Join(pairs, ",")
+}
+func (v *textUnmarshalerMapValue) Type() string {
+	return fmt.Sprintf("map[string]%s", v.elemTyp.Name())
+}
+
 type Config struct {
 	HandlingMode flag.ErrorHandling
 
@@ -178,12 +332,14 @@ var (
 	rTimeDurationType    reflect.Type
 	rFlagValueType       reflect.Type
 	rTextUnmarshalerType reflect.Type
+	rTextMarshalerType   reflect.Type
 )
 
 func init() {
 	rTimeDurationType = reflect.TypeOf(time.Second)
 	rFlagValueType = reflect.TypeOf(func() flag.Value { return nil }).Out(0)
 	rTextUnmarshalerType = reflect.TypeOf(func() encoding.TextUnmarshaler { return nil }).Out(0)
+	rTextMarshalerType = reflect.TypeOf(func() encoding.TextMarshaler { return nil }).Out(0)
 }
 
 type Builder struct {
@@ -517,6 +673,11 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 		fs.UintVarP(ref, c.fieldname, c.shorthand, uint(fv.Uint()), c.helpText)
 	case reflect.Slice:
 		elemType := rt.Elem()
+		if reflect.PtrTo(elemType).Implements(rTextUnmarshalerType) {
+			fs.VarP(newTextUnmarshalerSliceValue(fv), c.fieldname, c.shorthand, c.helpText)
+			return
+		}
+
 		// special case for time.Duration which is an int64
 		if elemType == rTimeDurationType {
 			ref := (*[]time.Duration)(unsafe.Pointer(fv.UnsafeAddr()))
@@ -621,6 +782,11 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 	case reflect.Map:
 		if rt.Key().Kind() == reflect.String {
 			elemType := rt.Elem()
+			if reflect.PtrTo(elemType).Implements(rTextUnmarshalerType) {
+				fs.VarP(newTextUnmarshalerMapValue(fv), c.fieldname, c.shorthand, c.helpText)
+				return
+			}
+
 			// special case for time.Duration which is an int64
 			if elemType == rTimeDurationType {
 				ref := (*map[string]time.Duration)(unsafe.Pointer(fv.UnsafeAddr()))
