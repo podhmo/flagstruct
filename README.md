@@ -156,6 +156,22 @@ type Options struct {
 }
 ```
 
+### `inline` option in `flag` tag
+Flattens nested struct fields to the parent level without adding a prefix.
+
+```go
+type DatabaseConfig struct {
+    Host string `flag:"host"`
+    Port int    `flag:"port"`
+}
+
+type Options struct {
+    DB DatabaseConfig `flag:",inline"`  // flags: --host, --port (not --db.host, --db.port)
+}
+```
+
+This is useful when you want to reuse struct definitions without adding nested prefixes.
+
 ### `required` tag
 Marks a flag as required. Validation fails if not provided.
 
