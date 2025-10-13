@@ -576,6 +576,28 @@ func TestBuilder_Build(t *testing.T) {
 			},
 			errorString: `invalid argument "key=not-an-int" for "--metadata" flag: value "not-an-int" for key "key" is not a valid int`,
 		},
+		{
+			name: "types--slice-TextUnmarshaller",
+			args: []string{"--ips", "127.0.0.1,192.168.1.1"},
+			want: `{"IPs":["127.0.0.1", "192.168.1.1"]}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type Options struct {
+					IPs []net.IP `flag:"ips"`
+				}
+				return newBuilder(), &Options{}
+			},
+		},
+		{
+			name: "types--map-TextUnmarshaller",
+			args: []string{"--ip-map", "loopback=127.0.0.1,private=192.168.1.1"},
+			want: `{"IPMap":{"loopback":"127.0.0.1", "private":"192.168.1.1"}}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type Options struct {
+					IPMap map[string]net.IP `flag:"ip-map"`
+				}
+				return newBuilder(), &Options{}
+			},
+		},
 	}
 
 	for _, tt := range tests {

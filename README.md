@@ -106,6 +106,21 @@ Custom types:
 - Types implementing `flag.Value` interface (Set, String, Type methods)
 - Types implementing `encoding.TextUnmarshaler` and `encoding.TextMarshaler` interfaces
 
+In addition to individual custom types, slices and maps of types that implement `encoding.TextUnmarshaler` are also supported. For example, you can use `[]net.IP` or `map[string]net.IP` directly in your configuration struct.
+
+```go
+type Config struct {
+    IPAddresses []net.IP `flag:"ips"`
+    IPMapping   map[string]net.IP `flag:"ip-map"`
+}
+```
+
+You can then provide these flags on the command line:
+
+```sh
+$ go run main.go --ips "192.168.1.1,10.0.0.1" --ip-map "private=192.168.1.1,public=8.8.8.8"
+```
+
 ## Struct tags
 
 ### `flag` tag
