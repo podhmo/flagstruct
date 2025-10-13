@@ -17,273 +17,6 @@ type HasHelpText interface {
 	HelpText() string
 }
 
-// from https://github.com/spf13/pflag/blob/master/string_to_string.go
-type mapValue[T any] struct {
-	value         *map[string]T
-	parser        func(s string) (T, error)
-	valueTypeName string
-}
-
-func newMapValue[T any](val map[string]T, p *map[string]T, valueTypeName string, parser func(s string) (T, error)) *mapValue[T] {
-	if val == nil {
-		val = make(map[string]T)
-	}
-	*p = val
-	return &mapValue[T]{
-		value:         p,
-		parser:        parser,
-		valueTypeName: valueTypeName,
-	}
-}
-
-func (s *mapValue[T]) Set(val string) error {
-	if *s.value == nil {
-		*s.value = make(map[string]T)
-	}
-	if val == "" {
-		return nil
-	}
-	for _, pair := range strings.Split(val, ",") {
-		kv := strings.SplitN(pair, "=", 2)
-		if len(kv) != 2 {
-			return fmt.Errorf("invalid map item: %q", pair)
-		}
-		key := kv[0]
-		valueStr := kv[1]
-		v, err := s.parser(valueStr)
-		if err != nil {
-			return fmt.Errorf("value %q for key %q is not a valid %s", valueStr, key, s.valueTypeName)
-		}
-		(*s.value)[key] = v
-	}
-	return nil
-}
-
-func (s *mapValue[T]) String() string {
-	if s == nil || s.value == nil {
-		return ""
-	}
-	pairs := make([]string, 0, len(*s.value))
-	for k, v := range *s.value {
-		pairs = append(pairs, fmt.Sprintf("%s=%v", k, v))
-	}
-	return strings.Join(pairs, ",")
-}
-
-func (s *mapValue[T]) Type() string {
-	return fmt.Sprintf("map[string]%s", s.valueTypeName)
-}
-
-// from https://github.com/spf13/pflag/blob/master/string_slice.go
-type sliceValue[T any] struct {
-	value         *[]T
-	parser        func(s string) (T, error)
-	valueTypeName string
-	changed       bool
-}
-
-func newSliceValue[T any](val []T, p *[]T, valueTypeName string, parser func(s string) (T, error)) *sliceValue[T] {
-	if val == nil {
-		val = make([]T, 0)
-	}
-	*p = val
-	return &sliceValue[T]{
-		value:         p,
-		parser:        parser,
-		valueTypeName: valueTypeName,
-	}
-}
-
-func (s *sliceValue[T]) Set(val string) error {
-	if !s.changed {
-		*s.value = make([]T, 0)
-		s.changed = true
-	}
-
-	parts := strings.Split(val, ",")
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
-		}
-		v, err := s.parser(part)
-		if err != nil {
-			return fmt.Errorf("value %q is not a valid %s", part, s.valueTypeName)
-		}
-		*s.value = append(*s.value, v)
-	}
-	return nil
-}
-
-func (s *sliceValue[T]) String() string {
-	if s == nil || s.value == nil {
-		return "[]"
-	}
-	parts := make([]string, len(*s.value))
-	for i, v := range *s.value {
-		parts[i] = fmt.Sprintf("%v", v)
-	}
-	return "[" + strings.Join(parts, ",") + "]"
-}
-
-func (s *sliceValue[T]) Type() string {
-	return fmt.Sprintf("[]%s", s.valueTypeName)
-}
-
-func textVar[T any, V flag.Value](val T, p *T, c flag.Value) flag.Value {
-	*p = val
-	return c
-}
-
-type textUnmarshalerSliceValue struct {
-	value   reflect.Value // slice
-	elemTyp reflect.Type
-	changed bool
-}
-
-func newTextUnmarshalerSliceValue(v reflect.Value) *textUnmarshalerSliceValue {
-	if v.IsNil() {
-		v.Set(reflect.MakeSlice(v.Type(), 0, 0))
-	}
-	return &textUnmarshalerSliceValue{
-		value:   v,
-		elemTyp: v.Type().Elem(),
-	}
-}
-
-func (v *textUnmarshalerSliceValue) Set(s string) error {
-	if !v.changed {
-		v.value.Set(reflect.MakeSlice(v.value.Type(), 0, 0))
-		v.changed = true
-	}
-
-	parts := strings.Split(s, ",")
-	for _, part := range parts {
-		part = strings.TrimSpace(part)
-		if part == "" {
-			continue
-		}
-
-		ob := reflect.New(v.elemTyp)
-		um, ok := ob.Interface().(encoding.TextUnmarshaler)
-		if !ok {
-			// pointer receiver
-			um, ok = ob.Addr().Interface().(encoding.TextUnmarshaler)
-			if !ok {
-				return fmt.Errorf("hmm, %s is not TextUnmarshaler", v.elemTyp)
-			}
-		}
-
-		if err := um.UnmarshalText([]byte(part)); err != nil {
-			return fmt.Errorf("value %q is not a valid %s (%v)", part, v.elemTyp.Name(), err)
-		}
-		v.value.Set(reflect.Append(v.value, ob.Elem()))
-	}
-	return nil
-}
-
-func (v *textUnmarshalerSliceValue) String() string {
-	if v.value.IsNil() {
-		return "[]"
-	}
-
-	parts := make([]string, v.value.Len())
-	for i := 0; i < v.value.Len(); i++ {
-		ob := v.value.Index(i)
-		if ob.CanInterface() {
-			if m, ok := ob.Interface().(encoding.TextMarshaler); ok {
-				b, err := m.MarshalText()
-				if err != nil {
-					parts[i] = fmt.Sprintf("ERR(%v)", err)
-				} else {
-					parts[i] = string(b)
-				}
-				continue
-			}
-		}
-		parts[i] = fmt.Sprintf("%v", ob.Interface())
-	}
-	return "[" + strings.Join(parts, ",") + "]"
-}
-func (v *textUnmarshalerSliceValue) Type() string {
-	return v.elemTyp.Name()
-}
-
-type textUnmarshalerMapValue struct {
-	value   reflect.Value // map
-	elemTyp reflect.Type
-}
-
-func newTextUnmarshalerMapValue(v reflect.Value) *textUnmarshalerMapValue {
-	if v.IsNil() {
-		v.Set(reflect.MakeMap(v.Type()))
-	}
-	return &textUnmarshalerMapValue{
-		value:   v,
-		elemTyp: v.Type().Elem(),
-	}
-}
-
-func (v *textUnmarshalerMapValue) Set(s string) error {
-	if v.value.IsNil() {
-		v.value.Set(reflect.MakeMap(v.value.Type()))
-	}
-	if s == "" {
-		return nil
-	}
-
-	for _, pair := range strings.Split(s, ",") {
-		kv := strings.SplitN(pair, "=", 2)
-		if len(kv) != 2 {
-			return fmt.Errorf("invalid map item: %q", pair)
-		}
-		key := kv[0]
-		valueStr := kv[1]
-
-		ob := reflect.New(v.elemTyp)
-		um, ok := ob.Interface().(encoding.TextUnmarshaler)
-		if !ok {
-			// pointer receiver
-			um, ok = ob.Addr().Interface().(encoding.TextUnmarshaler)
-			if !ok {
-				return fmt.Errorf("hmm, %s is not TextUnmarshaler", v.elemTyp)
-			}
-		}
-		if err := um.UnmarshalText([]byte(valueStr)); err != nil {
-			return fmt.Errorf("value %q for key %q is not a valid %s (%v)", valueStr, key, v.elemTyp.Name(), err)
-		}
-		v.value.SetMapIndex(reflect.ValueOf(key), ob.Elem())
-	}
-	return nil
-}
-
-func (v *textUnmarshalerMapValue) String() string {
-	if v.value.IsNil() {
-		return ""
-	}
-
-	pairs := make([]string, 0, v.value.Len())
-	for _, k := range v.value.MapKeys() {
-		val := v.value.MapIndex(k)
-		if val.CanInterface() {
-			if m, ok := val.Interface().(encoding.TextMarshaler); ok {
-				b, err := m.MarshalText()
-				if err != nil {
-					pairs = append(pairs, fmt.Sprintf("%s=ERR(%v)", k.String(), err))
-				} else {
-					pairs = append(pairs, fmt.Sprintf("%s=%s", k.String(), string(b)))
-				}
-				continue
-			}
-		}
-		pairs = append(pairs, fmt.Sprintf("%s=%v", k.String(), val.Interface()))
-	}
-	return strings.Join(pairs, ",")
-}
-func (v *textUnmarshalerMapValue) Type() string {
-	return fmt.Sprintf("map[string]%s", v.elemTyp.Name())
-}
-
 type Config struct {
 	HandlingMode flag.ErrorHandling
 
@@ -961,4 +694,274 @@ func PrintHelpAndExitIfError(fs *flag.FlagSet, err error, code int) {
 		fmt.Fprintf(os.Stderr, "\n%+v\n", err)
 		os.Exit(code)
 	}
+}
+
+//
+// internal helper types for map values and slices.
+//
+
+type mapValue[T any] struct {
+	value         *map[string]T
+	parser        func(s string) (T, error)
+	valueTypeName string
+}
+
+func newMapValue[T any](val map[string]T, p *map[string]T, valueTypeName string, parser func(s string) (T, error)) *mapValue[T] {
+	if val == nil {
+		val = make(map[string]T)
+	}
+	*p = val
+	return &mapValue[T]{
+		value:         p,
+		parser:        parser,
+		valueTypeName: valueTypeName,
+	}
+}
+
+func (s *mapValue[T]) Set(val string) error {
+	if *s.value == nil {
+		*s.value = make(map[string]T)
+	}
+	if val == "" {
+		return nil
+	}
+	for _, pair := range strings.Split(val, ",") {
+		kv := strings.SplitN(pair, "=", 2)
+		if len(kv) != 2 {
+			return fmt.Errorf("invalid map item: %q", pair)
+		}
+		key := kv[0]
+		valueStr := kv[1]
+		v, err := s.parser(valueStr)
+		if err != nil {
+			return fmt.Errorf("value %q for key %q is not a valid %s", valueStr, key, s.valueTypeName)
+		}
+		(*s.value)[key] = v
+	}
+	return nil
+}
+
+func (s *mapValue[T]) String() string {
+	if s == nil || s.value == nil {
+		return ""
+	}
+	pairs := make([]string, 0, len(*s.value))
+	for k, v := range *s.value {
+		pairs = append(pairs, fmt.Sprintf("%s=%v", k, v))
+	}
+	return strings.Join(pairs, ",")
+}
+
+func (s *mapValue[T]) Type() string {
+	return fmt.Sprintf("map[string]%s", s.valueTypeName)
+}
+
+// from https://github.com/spf13/pflag/blob/master/string_slice.go
+type sliceValue[T any] struct {
+	value         *[]T
+	parser        func(s string) (T, error)
+	valueTypeName string
+	changed       bool
+}
+
+func newSliceValue[T any](val []T, p *[]T, valueTypeName string, parser func(s string) (T, error)) *sliceValue[T] {
+	if val == nil {
+		val = make([]T, 0)
+	}
+	*p = val
+	return &sliceValue[T]{
+		value:         p,
+		parser:        parser,
+		valueTypeName: valueTypeName,
+	}
+}
+
+func (s *sliceValue[T]) Set(val string) error {
+	if !s.changed {
+		*s.value = make([]T, 0)
+		s.changed = true
+	}
+
+	parts := strings.Split(val, ",")
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		v, err := s.parser(part)
+		if err != nil {
+			return fmt.Errorf("value %q is not a valid %s", part, s.valueTypeName)
+		}
+		*s.value = append(*s.value, v)
+	}
+	return nil
+}
+
+func (s *sliceValue[T]) String() string {
+	if s == nil || s.value == nil {
+		return "[]"
+	}
+	parts := make([]string, len(*s.value))
+	for i, v := range *s.value {
+		parts[i] = fmt.Sprintf("%v", v)
+	}
+	return "[" + strings.Join(parts, ",") + "]"
+}
+
+func (s *sliceValue[T]) Type() string {
+	return fmt.Sprintf("[]%s", s.valueTypeName)
+}
+
+func textVar[T any, V flag.Value](val T, p *T, c flag.Value) flag.Value {
+	*p = val
+	return c
+}
+
+type textUnmarshalerSliceValue struct {
+	value   reflect.Value // slice
+	elemTyp reflect.Type
+	changed bool
+}
+
+func newTextUnmarshalerSliceValue(v reflect.Value) *textUnmarshalerSliceValue {
+	if v.IsNil() {
+		v.Set(reflect.MakeSlice(v.Type(), 0, 0))
+	}
+	return &textUnmarshalerSliceValue{
+		value:   v,
+		elemTyp: v.Type().Elem(),
+	}
+}
+
+func (v *textUnmarshalerSliceValue) Set(s string) error {
+	if !v.changed {
+		v.value.Set(reflect.MakeSlice(v.value.Type(), 0, 0))
+		v.changed = true
+	}
+
+	parts := strings.Split(s, ",")
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+
+		ob := reflect.New(v.elemTyp)
+		um, ok := ob.Interface().(encoding.TextUnmarshaler)
+		if !ok {
+			// pointer receiver
+			um, ok = ob.Addr().Interface().(encoding.TextUnmarshaler)
+			if !ok {
+				return fmt.Errorf("hmm, %s is not TextUnmarshaler", v.elemTyp)
+			}
+		}
+
+		if err := um.UnmarshalText([]byte(part)); err != nil {
+			return fmt.Errorf("value %q is not a valid %s (%v)", part, v.elemTyp.Name(), err)
+		}
+		v.value.Set(reflect.Append(v.value, ob.Elem()))
+	}
+	return nil
+}
+
+func (v *textUnmarshalerSliceValue) String() string {
+	if v.value.IsNil() {
+		return "[]"
+	}
+
+	parts := make([]string, v.value.Len())
+	for i := 0; i < v.value.Len(); i++ {
+		ob := v.value.Index(i)
+		if ob.CanInterface() {
+			if m, ok := ob.Interface().(encoding.TextMarshaler); ok {
+				b, err := m.MarshalText()
+				if err != nil {
+					parts[i] = fmt.Sprintf("ERR(%v)", err)
+				} else {
+					parts[i] = string(b)
+				}
+				continue
+			}
+		}
+		parts[i] = fmt.Sprintf("%v", ob.Interface())
+	}
+	return "[" + strings.Join(parts, ",") + "]"
+}
+func (v *textUnmarshalerSliceValue) Type() string {
+	return v.elemTyp.Name()
+}
+
+type textUnmarshalerMapValue struct {
+	value   reflect.Value // map
+	elemTyp reflect.Type
+}
+
+func newTextUnmarshalerMapValue(v reflect.Value) *textUnmarshalerMapValue {
+	if v.IsNil() {
+		v.Set(reflect.MakeMap(v.Type()))
+	}
+	return &textUnmarshalerMapValue{
+		value:   v,
+		elemTyp: v.Type().Elem(),
+	}
+}
+
+func (v *textUnmarshalerMapValue) Set(s string) error {
+	if v.value.IsNil() {
+		v.value.Set(reflect.MakeMap(v.value.Type()))
+	}
+	if s == "" {
+		return nil
+	}
+
+	for _, pair := range strings.Split(s, ",") {
+		kv := strings.SplitN(pair, "=", 2)
+		if len(kv) != 2 {
+			return fmt.Errorf("invalid map item: %q", pair)
+		}
+		key := kv[0]
+		valueStr := kv[1]
+
+		ob := reflect.New(v.elemTyp)
+		um, ok := ob.Interface().(encoding.TextUnmarshaler)
+		if !ok {
+			// pointer receiver
+			um, ok = ob.Addr().Interface().(encoding.TextUnmarshaler)
+			if !ok {
+				return fmt.Errorf("hmm, %s is not TextUnmarshaler", v.elemTyp)
+			}
+		}
+		if err := um.UnmarshalText([]byte(valueStr)); err != nil {
+			return fmt.Errorf("value %q for key %q is not a valid %s (%v)", valueStr, key, v.elemTyp.Name(), err)
+		}
+		v.value.SetMapIndex(reflect.ValueOf(key), ob.Elem())
+	}
+	return nil
+}
+
+func (v *textUnmarshalerMapValue) String() string {
+	if v.value.IsNil() {
+		return ""
+	}
+
+	pairs := make([]string, 0, v.value.Len())
+	for _, k := range v.value.MapKeys() {
+		val := v.value.MapIndex(k)
+		if val.CanInterface() {
+			if m, ok := val.Interface().(encoding.TextMarshaler); ok {
+				b, err := m.MarshalText()
+				if err != nil {
+					pairs = append(pairs, fmt.Sprintf("%s=ERR(%v)", k.String(), err))
+				} else {
+					pairs = append(pairs, fmt.Sprintf("%s=%s", k.String(), string(b)))
+				}
+				continue
+			}
+		}
+		pairs = append(pairs, fmt.Sprintf("%s=%v", k.String(), val.Interface()))
+	}
+	return strings.Join(pairs, ",")
+}
+func (v *textUnmarshalerMapValue) Type() string {
+	return fmt.Sprintf("map[string]%s", v.elemTyp.Name())
 }
