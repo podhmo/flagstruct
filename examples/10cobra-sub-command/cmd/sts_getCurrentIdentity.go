@@ -5,36 +5,33 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 
+	"github.com/podhmo/flagstruct/examples/10cobra-sub-command/cmd/internal"
 	"github.com/spf13/cobra"
 )
 
+type GetCurrentIdentityOptions struct {
+	CliInputJson        string `flag:"cli-input-json"`
+	GenerateCliSkeleton string `flag:"generate-cli-skeleton"`
+}
+
 // getCurrentIdentityCmd represents the getCurrentIdentity command
 var getCurrentIdentityCmd = &cobra.Command{
-	Use:   "getCurrentIdentity",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Use:   "get-current-identity",
+	Short: "get-current-identity for sts",
+	Long:  `awscli's sts get-current-identity like command`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("getCurrentIdentity called")
+		fmt.Println("sts get-current-identity called")
+		json.NewEncoder(os.Stdout).Encode(getCurrentIdentityCmdOptions)
 	},
 }
 
+var getCurrentIdentityCmdOptions = &GetCurrentIdentityOptions{}
+
 func init() {
+	internal.BindFlags(getCurrentIdentityCmd, getCurrentIdentityCmdOptions)
 	stsCmd.AddCommand(getCurrentIdentityCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// getCurrentIdentityCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// getCurrentIdentityCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

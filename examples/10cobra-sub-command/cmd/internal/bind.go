@@ -5,11 +5,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var binder = &flagstruct.Binder{Config: flagstruct.DefaultConfig()}
-
 func BindFlags(cmd *cobra.Command, options interface{}) {
-	assinByEnvVars := binder.Bind(cmd.Flags(), options)
+	binder := &flagstruct.Binder{Config: flagstruct.DefaultConfig()}
+	assignByEnvVars := binder.Bind(cmd.Flags(), options)
 	cmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-		return assinByEnvVars(cmd.Flags())
+		if err := assignByEnvVars(cmd.Flags()); err != nil {
+			return err
+		}
+		return binder.ValidateRequiredFlags(cmd.Flags())
 	}
 }

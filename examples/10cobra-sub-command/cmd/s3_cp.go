@@ -5,36 +5,40 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
+	"os"
 
+	"github.com/podhmo/flagstruct/examples/10cobra-sub-command/cmd/internal"
 	"github.com/spf13/cobra"
 )
+
+type CpOptions struct {
+	Dryrun            bool              `flag:"dryrun"`
+	Quiet             bool              `flag:"quiet"`
+	Include           string            `flag:"include"`
+	Exclude           string            `flag:"exclude"`
+	Acl               string            `flag:"acl"`
+	Metadata          map[string]string `flag:"metadata"`
+	MetadataDirective string            `flag:"metadata-directive"`
+	ExpectedSize      int               `flag:"expected-size"`
+	Recursive         bool              `flag:"recursive"`
+}
 
 // cpCmd represents the cp command
 var cpCmd = &cobra.Command{
 	Use:   "cp",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "cp for s3",
+	Long:  `awscli's s3 cp like command`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("cp called")
+		fmt.Println("s3 cp called")
+		json.NewEncoder(os.Stdout).Encode(cpCmdOptions)
 	},
 }
 
+var cpCmdOptions = &CpOptions{}
+
 func init() {
+	internal.BindFlags(cpCmd, cpCmdOptions)
 	s3Cmd.AddCommand(cpCmd)
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// cpCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// cpCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
