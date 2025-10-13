@@ -598,6 +598,30 @@ func TestBuilder_Build(t *testing.T) {
 				return newBuilder(), &Options{}
 			},
 		},
+		{
+			name: "types--slice-TextUnmarshaller--error-parsing",
+			args: []string{"--ips", "127.0.0.1,invalid-ip"},
+			want: `{"IPs":[]}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type Options struct {
+					IPs []net.IP `flag:"ips"`
+				}
+				return newBuilder(), &Options{}
+			},
+			errorString: `invalid argument "127.0.0.1,invalid-ip" for "--ips" flag: invalid CIDR address: invalid-ip`,
+		},
+		{
+			name: "types--map-TextUnmarshaller--error-parsing",
+			args: []string{"--ip-map", "loopback=invalid-ip"},
+			want: `{"IPMap":{}}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type Options struct {
+					IPMap map[string]net.IP `flag:"ip-map"`
+				}
+				return newBuilder(), &Options{}
+			},
+			errorString: `invalid argument "loopback=invalid-ip" for "--ip-map" flag: value "invalid-ip" for key "loopback" is not a valid IP`,
+		},
 	}
 
 	for _, tt := range tests {
