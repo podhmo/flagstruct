@@ -10,6 +10,7 @@ A Go library that automatically builds pflag.FlagSet from struct definitions usi
 - Short flags - Define shorthand flags via struct tags
 - Required flags - Mark flags as required with validation
 - Custom help text - Customize help messages via struct tags or interfaces
+- Interspersed arguments - Supports interspersed flags and non-flag arguments by default
 
 ## install
 
@@ -227,6 +228,42 @@ func main() {
     flagstruct.Parse(config, flagstruct.WithMoreFlagnameTags("json"))
     // --debug flag is shared between BaseConfig, AConfig.BaseConfig, and BConfig.BaseConfig
 }
+```
+
+### Interspersed Arguments
+
+By default, `flagstruct` allows flags and non-flag arguments to be interspersed. This means you can mix flags and other arguments on the command line.
+
+For example, with the following struct:
+
+```go
+type Options struct {
+    Name    string `flag:"name"`
+    Verbose bool   `flag:"verbose" short:"v"`
+}
+```
+
+You can run your program with arguments like this:
+
+```console
+$ my-app --name foo arg1 --verbose arg2
+```
+
+`flagstruct` will correctly parse `--name` as "foo" and `--verbose` as `true`, while the remaining non-flag arguments (`arg1`, `arg2`) can be retrieved from the `*pflag.FlagSet`.
+
+```go
+options := &Options{}
+fs := flagstruct.Build(options)
+fs.Parse(os.Args[1:])
+
+fmt.Printf("options: %#v\n", options)
+fmt.Printf("args: %v\n", fs.Args())
+```
+
+Output:
+```
+options: &main.Options{Name:"foo", Verbose:true}
+args: [arg1 arg2]
 ```
 
 ### Custom types with flag.Value

@@ -368,6 +368,7 @@ func (b *Builder) Build(o interface{}) *FlagSet {
 		name = rt.Name()
 	}
 	fs := flag.NewFlagSet(name, b.HandlingMode)
+	fs.SetInterspersed(true) // allow interspersed flags
 	fs.Usage = func() {
 		if b.Header != "" {
 			fmt.Fprintln(fs.Output(), b.Header)
