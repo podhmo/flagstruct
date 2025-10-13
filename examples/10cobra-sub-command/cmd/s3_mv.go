@@ -14,14 +14,15 @@ import (
 )
 
 type MvOptions struct {
-	Dryrun            bool   `flag:"dryrun"`
-	Quiet             bool   `flag:"quiet"`
-	Include           string `flag:"include"`
-	Exclude           string `flag:"exclude"`
-	Acl               string `flag:"acl"`
-	MetadataDirective string `flag:"metadata-directive"`
-	ExpectedSize      int    `flag:"expected-size"`
-	Recursive         bool   `flag:"recursive"`
+	Dryrun            bool              `flag:"dryrun"`
+	Quiet             bool              `flag:"quiet"`
+	Include           string            `flag:"include"`
+	Exclude           string            `flag:"exclude"`
+	Acl               string            `flag:"acl"`
+	Metadata          map[string]string `flag:"metadata"`
+	MetadataDirective string            `flag:"metadata-directive"`
+	ExpectedSize      int               `flag:"expected-size"`
+	Recursive         bool              `flag:"recursive"`
 }
 
 // mvCmd represents the mv command
