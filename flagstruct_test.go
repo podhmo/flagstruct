@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/podhmo/flagstruct"
 	"github.com/spf13/pflag"
@@ -461,6 +462,94 @@ func TestBuilder_Build(t *testing.T) {
 				b.EnvPrefix = "X_"
 				b.EnvvarSupport = true
 				return b, &Options{}
+			},
+		},
+		{
+			name: "types--map-string-string",
+			args: []string{"--metadata", "project=alpha,owner=john.doe"},
+			want: `{"Metadata":{"owner":"john.doe","project":"alpha"}}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type Options struct {
+					Metadata map[string]string `flag:"metadata"`
+				}
+				return newBuilder(), &Options{}
+			},
+		},
+		{
+			name: "types--map-string-int",
+			args: []string{"--metadata", "project=1,priority=10"},
+			want: `{"Metadata":{"project":1,"priority":10}}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type Options struct {
+					Metadata map[string]int `flag:"metadata"`
+				}
+				return newBuilder(), &Options{}
+			},
+		},
+		{
+			name: "types--map-string-bool",
+			args: []string{"--metadata", "enabled=true,visible=false"},
+			want: `{"Metadata":{"enabled":true,"visible":false}}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type Options struct {
+					Metadata map[string]bool `flag:"metadata"`
+				}
+				return newBuilder(), &Options{}
+			},
+		},
+		{
+			name: "types--map-string-int64",
+			args: []string{"--metadata", "a=1,b=2"},
+			want: `{"Metadata":{"a":1,"b":2}}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type Options struct {
+					Metadata map[string]int64 `flag:"metadata"`
+				}
+				return newBuilder(), &Options{}
+			},
+		},
+		{
+			name: "types--map-string-uint",
+			args: []string{"--metadata", "a=1,b=2"},
+			want: `{"Metadata":{"a":1,"b":2}}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type Options struct {
+					Metadata map[string]uint `flag:"metadata"`
+				}
+				return newBuilder(), &Options{}
+			},
+		},
+		{
+			name: "types--map-string-uint64",
+			args: []string{"--metadata", "a=1,b=2"},
+			want: `{"Metadata":{"a":1,"b":2}}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type Options struct {
+					Metadata map[string]uint64 `flag:"metadata"`
+				}
+				return newBuilder(), &Options{}
+			},
+		},
+		{
+			name: "types--map-string-float64",
+			args: []string{"--metadata", "a=1.1,b=2.2"},
+			want: `{"Metadata":{"a":1.1,"b":2.2}}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type Options struct {
+					Metadata map[string]float64 `flag:"metadata"`
+				}
+				return newBuilder(), &Options{}
+			},
+		},
+		{
+			name: "types--map-string-duration",
+			args: []string{"--metadata", "timeout=1s,interval=500ms"},
+			want: `{"Metadata":{"timeout":1000000000,"interval":500000000}}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type Options struct {
+					Metadata map[string]time.Duration `flag:"metadata"`
+				}
+				return newBuilder(), &Options{}
 			},
 		},
 	}

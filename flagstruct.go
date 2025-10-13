@@ -17,7 +17,60 @@ type HasHelpText interface {
 	HelpText() string
 }
 
-// TODO: map
+// from https://github.com/spf13/pflag/blob/master/string_to_string.go
+type mapValue[T any] struct {
+	value    *map[string]T
+	parser   func(s string) (T, error)
+	typeName string
+}
+
+func newMapValue[T any](val map[string]T, p *map[string]T, typeName string, parser func(s string) (T, error)) *mapValue[T] {
+	if val == nil {
+		val = make(map[string]T)
+	}
+	*p = val
+	return &mapValue[T]{
+		value:    p,
+		parser:   parser,
+		typeName: typeName,
+	}
+}
+
+func (s *mapValue[T]) Set(val string) error {
+	if *s.value == nil {
+		*s.value = make(map[string]T)
+	}
+	if val == "" {
+		return nil
+	}
+	for _, pair := range strings.Split(val, ",") {
+		kv := strings.SplitN(pair, "=", 2)
+		if len(kv) != 2 {
+			return fmt.Errorf("invalid map item: %q", pair)
+		}
+		v, err := s.parser(kv[1])
+		if err != nil {
+			return fmt.Errorf("invalid map value: %w", err)
+		}
+		(*s.value)[kv[0]] = v
+	}
+	return nil
+}
+
+func (s *mapValue[T]) String() string {
+	if s == nil || s.value == nil {
+		return ""
+	}
+	pairs := make([]string, 0, len(*s.value))
+	for k, v := range *s.value {
+		pairs = append(pairs, fmt.Sprintf("%s=%v", k, v))
+	}
+	return strings.Join(pairs, ",")
+}
+
+func (s *mapValue[T]) Type() string {
+	return s.typeName
+}
 
 type Config struct {
 	HandlingMode flag.ErrorHandling
@@ -449,8 +502,112 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 		default:
 			panic(fmt.Sprintf("unsupported slice type %v", rt))
 		}
+	case reflect.Map:
+		if rt.Key().Kind() == reflect.String {
+			elemType := rt.Elem()
+			// special case for time.Duration which is an int64
+			if elemType == rTimeDurationType {
+				ref := (*map[string]time.Duration)(unsafe.Pointer(fv.UnsafeAddr()))
+				var defaultValue map[string]time.Duration
+				if fv.Len() > 0 {
+					defaultValue = make(map[string]time.Duration, fv.Len())
+					for _, k := range fv.MapKeys() {
+						defaultValue[k.String()] = time.Duration(fv.MapIndex(k).Int())
+					}
+				}
+				fs.VarP(newMapValue(defaultValue, ref, "stringToDuration", time.ParseDuration), c.fieldname, c.shorthand, c.helpText)
+				return
+			}
+
+			switch elemType.Kind() {
+			case reflect.String:
+				ref := (*map[string]string)(unsafe.Pointer(fv.UnsafeAddr()))
+				var defaultValue map[string]string
+				if fv.Len() > 0 {
+					defaultValue = make(map[string]string, fv.Len())
+					for _, k := range fv.MapKeys() {
+						defaultValue[k.String()] = fv.MapIndex(k).String()
+					}
+				}
+				fs.VarP(newMapValue(defaultValue, ref, "stringToString", func(s string) (string, error) { return s, nil }), c.fieldname, c.shorthand, c.helpText)
+				return
+			case reflect.Bool:
+				ref := (*map[string]bool)(unsafe.Pointer(fv.UnsafeAddr()))
+				var defaultValue map[string]bool
+				if fv.Len() > 0 {
+					defaultValue = make(map[string]bool, fv.Len())
+					for _, k := range fv.MapKeys() {
+						defaultValue[k.String()] = fv.MapIndex(k).Bool()
+					}
+				}
+				fs.VarP(newMapValue(defaultValue, ref, "stringToBool", strconv.ParseBool), c.fieldname, c.shorthand, c.helpText)
+				return
+			case reflect.Int:
+				ref := (*map[string]int)(unsafe.Pointer(fv.UnsafeAddr()))
+				var defaultValue map[string]int
+				if fv.Len() > 0 {
+					defaultValue = make(map[string]int, fv.Len())
+					for _, k := range fv.MapKeys() {
+						defaultValue[k.String()] = int(fv.MapIndex(k).Int())
+					}
+				}
+				fs.VarP(newMapValue(defaultValue, ref, "stringToInt", strconv.Atoi), c.fieldname, c.shorthand, c.helpText)
+				return
+			case reflect.Int64:
+				ref := (*map[string]int64)(unsafe.Pointer(fv.UnsafeAddr()))
+				var defaultValue map[string]int64
+				if fv.Len() > 0 {
+					defaultValue = make(map[string]int64, fv.Len())
+					for _, k := range fv.MapKeys() {
+						defaultValue[k.String()] = fv.MapIndex(k).Int()
+					}
+				}
+				parser := func(s string) (int64, error) { return strconv.ParseInt(s, 10, 64) }
+				fs.VarP(newMapValue(defaultValue, ref, "stringToInt64", parser), c.fieldname, c.shorthand, c.helpText)
+				return
+			case reflect.Uint:
+				ref := (*map[string]uint)(unsafe.Pointer(fv.UnsafeAddr()))
+				var defaultValue map[string]uint
+				if fv.Len() > 0 {
+					defaultValue = make(map[string]uint, fv.Len())
+					for _, k := range fv.MapKeys() {
+						defaultValue[k.String()] = uint(fv.MapIndex(k).Uint())
+					}
+				}
+				parser := func(s string) (uint, error) {
+					v, err := strconv.ParseUint(s, 10, 0)
+					return uint(v), err
+				}
+				fs.VarP(newMapValue(defaultValue, ref, "stringToUint", parser), c.fieldname, c.shorthand, c.helpText)
+				return
+			case reflect.Uint64:
+				ref := (*map[string]uint64)(unsafe.Pointer(fv.UnsafeAddr()))
+				var defaultValue map[string]uint64
+				if fv.Len() > 0 {
+					defaultValue = make(map[string]uint64, fv.Len())
+					for _, k := range fv.MapKeys() {
+						defaultValue[k.String()] = fv.MapIndex(k).Uint()
+					}
+				}
+				parser := func(s string) (uint64, error) { return strconv.ParseUint(s, 10, 64) }
+				fs.VarP(newMapValue(defaultValue, ref, "stringToUint64", parser), c.fieldname, c.shorthand, c.helpText)
+				return
+			case reflect.Float64:
+				ref := (*map[string]float64)(unsafe.Pointer(fv.UnsafeAddr()))
+				var defaultValue map[string]float64
+				if fv.Len() > 0 {
+					defaultValue = make(map[string]float64, fv.Len())
+					for _, k := range fv.MapKeys() {
+						defaultValue[k.String()] = fv.MapIndex(k).Float()
+					}
+				}
+				parser := func(s string) (float64, error) { return strconv.ParseFloat(s, 64) }
+				fs.VarP(newMapValue(defaultValue, ref, "stringToFloat64", parser), c.fieldname, c.shorthand, c.helpText)
+				return
+			}
+		}
+		fallthrough
 	default:
-		// TODO: map
 		panic(fmt.Sprintf("unsupported type %v", rt))
 	}
 }
