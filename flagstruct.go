@@ -379,71 +379,31 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 		}
 		b.walk(fs, rt, fv, c.prefix+c.fieldname+".")
 	case reflect.Bool:
-		var ref *bool
-		if c.field.IsExported() {
-			ref = fv.Addr().Interface().(*bool)
-		} else {
-			ref = (*bool)(unsafe.Pointer(fv.UnsafeAddr()))
-		}
+		ref := (*bool)(unsafe.Pointer(fv.UnsafeAddr()))
 		fs.BoolVarP(ref, c.fieldname, c.shorthand, fv.Bool(), c.helpText)
 	case reflect.Float64:
-		var ref *float64
-		if c.field.IsExported() {
-			ref = fv.Addr().Interface().(*float64)
-		} else {
-			ref = (*float64)(unsafe.Pointer(fv.UnsafeAddr()))
-		}
+		ref := (*float64)(unsafe.Pointer(fv.UnsafeAddr()))
 		fs.Float64VarP(ref, c.fieldname, c.shorthand, fv.Float(), c.helpText)
 	case reflect.Int64:
 		switch rt {
 		case rTimeDurationType:
-			var ref *time.Duration
-			if c.field.IsExported() {
-				ref = fv.Addr().Interface().(*time.Duration)
-			} else {
-				ref = (*time.Duration)(unsafe.Pointer(fv.UnsafeAddr()))
-			}
+			ref := (*time.Duration)(unsafe.Pointer(fv.UnsafeAddr()))
 			fs.DurationVarP(ref, c.fieldname, c.shorthand, time.Duration(fv.Int()), c.helpText)
 		default:
-			var ref *int64
-			if c.field.IsExported() {
-				ref = fv.Addr().Interface().(*int64)
-			} else {
-				ref = (*int64)(unsafe.Pointer(fv.UnsafeAddr()))
-			}
+			ref := (*int64)(unsafe.Pointer(fv.UnsafeAddr()))
 			fs.Int64VarP(ref, c.fieldname, c.shorthand, fv.Int(), c.helpText)
 		}
 	case reflect.Int:
-		var ref *int
-		if c.field.IsExported() {
-			ref = fv.Addr().Interface().(*int)
-		} else {
-			ref = (*int)(unsafe.Pointer(fv.UnsafeAddr()))
-		}
+		ref := (*int)(unsafe.Pointer(fv.UnsafeAddr()))
 		fs.IntVarP(ref, c.fieldname, c.shorthand, int(fv.Int()), c.helpText)
 	case reflect.String:
-		var ref *string
-		if c.field.IsExported() {
-			ref = fv.Addr().Interface().(*string)
-		} else {
-			ref = (*string)(unsafe.Pointer(fv.UnsafeAddr()))
-		}
+		ref := (*string)(unsafe.Pointer(fv.UnsafeAddr()))
 		fs.StringVarP(ref, c.fieldname, c.shorthand, fv.String(), c.helpText)
 	case reflect.Uint64:
-		var ref *uint64
-		if c.field.IsExported() {
-			ref = fv.Addr().Interface().(*uint64)
-		} else {
-			ref = (*uint64)(unsafe.Pointer(fv.UnsafeAddr()))
-		}
+		ref := (*uint64)(unsafe.Pointer(fv.UnsafeAddr()))
 		fs.Uint64VarP(ref, c.fieldname, c.shorthand, fv.Uint(), c.helpText)
 	case reflect.Uint:
-		var ref *uint
-		if c.field.IsExported() {
-			ref = fv.Addr().Interface().(*uint)
-		} else {
-			ref = (*uint)(unsafe.Pointer(fv.UnsafeAddr()))
-		}
+		ref := (*uint)(unsafe.Pointer(fv.UnsafeAddr()))
 		fs.UintVarP(ref, c.fieldname, c.shorthand, uint(fv.Uint()), c.helpText)
 	case reflect.Slice:
 		elemType := rt.Elem()
