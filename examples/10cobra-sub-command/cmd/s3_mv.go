@@ -10,9 +10,19 @@ import (
 	"os"
 
 	"github.com/podhmo/flagstruct/examples/10cobra-sub-command/cmd/internal"
-	"github.com/podhmo/flagstruct/examples/10cobra-sub-command/s3"
 	"github.com/spf13/cobra"
 )
+
+type MvOptions struct {
+	Dryrun            bool   `flag:"dryrun"`
+	Quiet             bool   `flag:"quiet"`
+	Include           string `flag:"include"`
+	Exclude           string `flag:"exclude"`
+	Acl               string `flag:"acl"`
+	MetadataDirective string `flag:"metadata-directive"`
+	ExpectedSize      int    `flag:"expected-size"`
+	Recursive         bool   `flag:"recursive"`
+}
 
 // mvCmd represents the mv command
 var mvCmd = &cobra.Command{
@@ -25,7 +35,7 @@ var mvCmd = &cobra.Command{
 	},
 }
 
-var mvCmdOptions = &s3.MvOptions{}
+var mvCmdOptions = &MvOptions{}
 
 func init() {
 	internal.BindFlags(mvCmd, mvCmdOptions)

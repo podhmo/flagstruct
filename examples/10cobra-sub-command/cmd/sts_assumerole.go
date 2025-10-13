@@ -10,9 +10,22 @@ import (
 	"os"
 
 	"github.com/podhmo/flagstruct/examples/10cobra-sub-command/cmd/internal"
-	"github.com/podhmo/flagstruct/examples/10cobra-sub-command/sts"
 	"github.com/spf13/cobra"
 )
+
+type AssumeRoleOptions struct {
+	RoleArn             string   `flag:"role-arn" required:"true"`
+	RoleSessionName     string   `flag:"role-session-name" required:"true"`
+	Policy              string   `flag:"policy"`
+	DurationSeconds     int      `flag:"duration-seconds"`
+	TransitiveTagKeys   []string `flag:"transitive-tag-keys"`
+	ExternalId          string   `flag:"external-id"`
+	SerialNumber        string   `flag:"serial-number"`
+	TokenCode           string   `flag:"token-code"`
+	SourceIdentity      string   `flag:"source-identity"`
+	CliInputJson        string   `flag:"cli-input-json"`
+	GenerateCliSkeleton string   `flag:"generate-cli-skeleton"`
+}
 
 // assumeroleCmd represents the assumerole command
 var assumeroleCmd = &cobra.Command{
@@ -25,7 +38,7 @@ var assumeroleCmd = &cobra.Command{
 	},
 }
 
-var assumeRoleCmdOptions = &sts.AssumeRoleOptions{}
+var assumeRoleCmdOptions = &AssumeRoleOptions{}
 
 func init() {
 	internal.BindFlags(assumeroleCmd, assumeRoleCmdOptions)

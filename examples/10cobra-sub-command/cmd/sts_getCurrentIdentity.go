@@ -10,9 +10,13 @@ import (
 	"os"
 
 	"github.com/podhmo/flagstruct/examples/10cobra-sub-command/cmd/internal"
-	"github.com/podhmo/flagstruct/examples/10cobra-sub-command/sts"
 	"github.com/spf13/cobra"
 )
+
+type GetCurrentIdentityOptions struct {
+	CliInputJson        string `flag:"cli-input-json"`
+	GenerateCliSkeleton string `flag:"generate-cli-skeleton"`
+}
 
 // getCurrentIdentityCmd represents the getCurrentIdentity command
 var getCurrentIdentityCmd = &cobra.Command{
@@ -25,7 +29,7 @@ var getCurrentIdentityCmd = &cobra.Command{
 	},
 }
 
-var getCurrentIdentityCmdOptions = &sts.GetCurrentIdentityOptions{}
+var getCurrentIdentityCmdOptions = &GetCurrentIdentityOptions{}
 
 func init() {
 	internal.BindFlags(getCurrentIdentityCmd, getCurrentIdentityCmdOptions)
