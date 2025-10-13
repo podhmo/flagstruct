@@ -156,22 +156,6 @@ type Options struct {
 }
 ```
 
-### `inline` option in `flag` tag
-Flattens nested struct fields to the parent level without adding a prefix.
-
-```go
-type DatabaseConfig struct {
-    Host string `flag:"host"`
-    Port int    `flag:"port"`
-}
-
-type Options struct {
-    DB DatabaseConfig `flag:",inline"`  // flags: --host, --port (not --db.host, --db.port)
-}
-```
-
-This is useful when you want to reuse struct definitions without adding nested prefixes.
-
 ### `required` tag
 Marks a flag as required. Validation fails if not provided.
 
@@ -214,9 +198,49 @@ func main() {
 }
 ```
 
+### Embedded fields
+
+Embedded structs allow you to compose configuration from multiple sources. Fields from embedded structs are promoted to the parent level.
+
+```go
+type DatabaseConfig struct {
+    Host string `flag:"host"`
+    Port int    `flag:"port"`
+}
+
+type Options struct {
+    DatabaseConfig  // embedded struct
+}
+
+func main() {
+    options := &Options{}
+    flagstruct.Parse(options)
+    // flags: --host, --port (fields are promoted to parent level)
+}
+```
+
+The `--host` and `--port` flags from the embedded `DatabaseConfig` struct are available directly at the top level, not as `--databaseconfig.host` or `--databaseconfig.port`.
+
+#### `inline` option in `flag` tag
+
+Alternatively, you can achieve the same result using the `inline` option without embedding:
+
+```go
+type DatabaseConfig struct {
+    Host string `flag:"host"`
+    Port int    `flag:"port"`
+}
+
+type Options struct {
+    DB DatabaseConfig `flag:",inline"`  // flags: --host, --port (not --db.host, --db.port)
+}
+```
+
+Both approaches flatten nested struct fields to the parent level without adding a prefix. Use embedded structs when you want field promotion in Go code, or use `inline` when you want to keep the nested structure in code but flatten flags.
+
 ### Shared common options
 
-Share common configuration across multiple nested structs using embedded pointers.
+Share common configuration across multiple nested structs using embedded pointers. This pattern is useful when you want a single flag to control the same setting across multiple components.
 
 ```go
 type BaseConfig struct {
@@ -243,6 +267,10 @@ func main() {
     config := &Config{}
     flagstruct.Parse(config, flagstruct.WithMoreFlagnameTags("json"))
     // --debug flag is shared between BaseConfig, AConfig.BaseConfig, and BConfig.BaseConfig
+    // When you set --debug=true, all three embedded BaseConfig instances point to the same value
+    fmt.Printf("Debug: %v, A.Debug: %v, B.Debug: %v\n", 
+        config.Debug, config.A.Debug, config.B.Debug)
+    // Output: Debug: true, A.Debug: true, B.Debug: true
 }
 ```
 
