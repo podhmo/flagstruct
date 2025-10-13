@@ -552,6 +552,18 @@ func TestBuilder_Build(t *testing.T) {
 				return newBuilder(), &Options{}
 			},
 		},
+		{
+			name: "types--map-string-int--error-parsing",
+			args: []string{"--metadata", "key=not-an-int"},
+			want: `{"Metadata":{}}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type Options struct {
+					Metadata map[string]int `flag:"metadata"`
+				}
+				return newBuilder(), &Options{}
+			},
+			errorString: `invalid argument "key=not-an-int" for "--metadata" flag: value "not-an-int" for key "key" is not a valid int`,
+		},
 	}
 
 	for _, tt := range tests {

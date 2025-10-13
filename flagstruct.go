@@ -19,20 +19,20 @@ type HasHelpText interface {
 
 // from https://github.com/spf13/pflag/blob/master/string_to_string.go
 type mapValue[T any] struct {
-	value    *map[string]T
-	parser   func(s string) (T, error)
-	typeName string
+	value         *map[string]T
+	parser        func(s string) (T, error)
+	valueTypeName string
 }
 
-func newMapValue[T any](val map[string]T, p *map[string]T, typeName string, parser func(s string) (T, error)) *mapValue[T] {
+func newMapValue[T any](val map[string]T, p *map[string]T, valueTypeName string, parser func(s string) (T, error)) *mapValue[T] {
 	if val == nil {
 		val = make(map[string]T)
 	}
 	*p = val
 	return &mapValue[T]{
-		value:    p,
-		parser:   parser,
-		typeName: typeName,
+		value:         p,
+		parser:        parser,
+		valueTypeName: valueTypeName,
 	}
 }
 
@@ -48,11 +48,13 @@ func (s *mapValue[T]) Set(val string) error {
 		if len(kv) != 2 {
 			return fmt.Errorf("invalid map item: %q", pair)
 		}
-		v, err := s.parser(kv[1])
+		key := kv[0]
+		valueStr := kv[1]
+		v, err := s.parser(valueStr)
 		if err != nil {
-			return fmt.Errorf("invalid map value: %w", err)
+			return fmt.Errorf("value %q for key %q is not a valid %s", valueStr, key, s.valueTypeName)
 		}
-		(*s.value)[kv[0]] = v
+		(*s.value)[key] = v
 	}
 	return nil
 }
@@ -69,7 +71,7 @@ func (s *mapValue[T]) String() string {
 }
 
 func (s *mapValue[T]) Type() string {
-	return s.typeName
+	return fmt.Sprintf("map[string]%s", s.valueTypeName)
 }
 
 type Config struct {
@@ -515,7 +517,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 						defaultValue[k.String()] = time.Duration(fv.MapIndex(k).Int())
 					}
 				}
-				fs.VarP(newMapValue(defaultValue, ref, "stringToDuration", time.ParseDuration), c.fieldname, c.shorthand, c.helpText)
+				fs.VarP(newMapValue(defaultValue, ref, "time.Duration", time.ParseDuration), c.fieldname, c.shorthand, c.helpText)
 				return
 			}
 
@@ -529,7 +531,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 						defaultValue[k.String()] = fv.MapIndex(k).String()
 					}
 				}
-				fs.VarP(newMapValue(defaultValue, ref, "stringToString", func(s string) (string, error) { return s, nil }), c.fieldname, c.shorthand, c.helpText)
+				fs.VarP(newMapValue(defaultValue, ref, "string", func(s string) (string, error) { return s, nil }), c.fieldname, c.shorthand, c.helpText)
 				return
 			case reflect.Bool:
 				ref := (*map[string]bool)(unsafe.Pointer(fv.UnsafeAddr()))
@@ -540,7 +542,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 						defaultValue[k.String()] = fv.MapIndex(k).Bool()
 					}
 				}
-				fs.VarP(newMapValue(defaultValue, ref, "stringToBool", strconv.ParseBool), c.fieldname, c.shorthand, c.helpText)
+				fs.VarP(newMapValue(defaultValue, ref, "bool", strconv.ParseBool), c.fieldname, c.shorthand, c.helpText)
 				return
 			case reflect.Int:
 				ref := (*map[string]int)(unsafe.Pointer(fv.UnsafeAddr()))
@@ -551,7 +553,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 						defaultValue[k.String()] = int(fv.MapIndex(k).Int())
 					}
 				}
-				fs.VarP(newMapValue(defaultValue, ref, "stringToInt", strconv.Atoi), c.fieldname, c.shorthand, c.helpText)
+				fs.VarP(newMapValue(defaultValue, ref, "int", strconv.Atoi), c.fieldname, c.shorthand, c.helpText)
 				return
 			case reflect.Int64:
 				ref := (*map[string]int64)(unsafe.Pointer(fv.UnsafeAddr()))
@@ -563,7 +565,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 					}
 				}
 				parser := func(s string) (int64, error) { return strconv.ParseInt(s, 10, 64) }
-				fs.VarP(newMapValue(defaultValue, ref, "stringToInt64", parser), c.fieldname, c.shorthand, c.helpText)
+				fs.VarP(newMapValue(defaultValue, ref, "int64", parser), c.fieldname, c.shorthand, c.helpText)
 				return
 			case reflect.Uint:
 				ref := (*map[string]uint)(unsafe.Pointer(fv.UnsafeAddr()))
@@ -578,7 +580,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 					v, err := strconv.ParseUint(s, 10, 0)
 					return uint(v), err
 				}
-				fs.VarP(newMapValue(defaultValue, ref, "stringToUint", parser), c.fieldname, c.shorthand, c.helpText)
+				fs.VarP(newMapValue(defaultValue, ref, "uint", parser), c.fieldname, c.shorthand, c.helpText)
 				return
 			case reflect.Uint64:
 				ref := (*map[string]uint64)(unsafe.Pointer(fv.UnsafeAddr()))
@@ -590,7 +592,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 					}
 				}
 				parser := func(s string) (uint64, error) { return strconv.ParseUint(s, 10, 64) }
-				fs.VarP(newMapValue(defaultValue, ref, "stringToUint64", parser), c.fieldname, c.shorthand, c.helpText)
+				fs.VarP(newMapValue(defaultValue, ref, "uint64", parser), c.fieldname, c.shorthand, c.helpText)
 				return
 			case reflect.Float64:
 				ref := (*map[string]float64)(unsafe.Pointer(fv.UnsafeAddr()))
@@ -602,7 +604,7 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 					}
 				}
 				parser := func(s string) (float64, error) { return strconv.ParseFloat(s, 64) }
-				fs.VarP(newMapValue(defaultValue, ref, "stringToFloat64", parser), c.fieldname, c.shorthand, c.helpText)
+				fs.VarP(newMapValue(defaultValue, ref, "float64", parser), c.fieldname, c.shorthand, c.helpText)
 				return
 			}
 		}
