@@ -111,6 +111,18 @@ func TestBuilder_Build(t *testing.T) {
 			},
 		},
 		{
+			name: "types--int-slice--error-parsing",
+			args: []string{"--nums", "1,2,c"},
+			want: `{"Nums":[]}`,
+			create: func() (*flagstruct.Builder, interface{}) {
+				type Options struct {
+					Nums []int `flag:"nums"`
+				}
+				return newBuilder(), &Options{}
+			},
+			errorString: `invalid argument "1,2,c" for "--nums" flag: value "c" is not a valid int`,
+		},
+		{
 			name: "options--long",
 			args: []string{"--verbose"},
 			want: `{"Verbose":true}`,
