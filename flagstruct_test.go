@@ -608,7 +608,7 @@ func TestBuilder_Build(t *testing.T) {
 				}
 				return newBuilder(), &Options{}
 			},
-			errorString: `invalid argument "127.0.0.1,invalid-ip" for "--ips" flag: invalid CIDR address: invalid-ip`,
+			errorString: `invalid argument "127.0.0.1,invalid-ip" for "--ips" flag: value "invalid-ip" is not a valid IP (invalid IP address: invalid-ip)`,
 		},
 		{
 			name: "types--map-TextUnmarshaller--error-parsing",

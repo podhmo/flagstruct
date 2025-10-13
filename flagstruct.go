@@ -175,7 +175,7 @@ func (v *textUnmarshalerSliceValue) Set(s string) error {
 		}
 
 		if err := um.UnmarshalText([]byte(part)); err != nil {
-			return fmt.Errorf("invalid CIDR address: %s", part)
+			return fmt.Errorf("value %q is not a valid %s (%v)", part, v.elemTyp.Name(), err)
 		}
 		v.value.Set(reflect.Append(v.value, ob.Elem()))
 	}
