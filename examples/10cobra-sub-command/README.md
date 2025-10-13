@@ -37,7 +37,7 @@ s3 ls called
 		--quiet
 		--include <value:string>
 		--exclude <value:string>
-		--acl <valu:stringe
+		--acl <value:string>
 		...
 		--metadata <value:map> // not supported yet.
 		--metadata-directive <value:string>
@@ -48,7 +48,7 @@ s3 ls called
 		--quiet
 		--include <value:string>
 		--exclude <value:string>
-		--acl <valu:stringe
+		--acl <value:string>
 		...
 		--metadata <value:map> // not supported yet.
 		--metadata-directive <value:string>
