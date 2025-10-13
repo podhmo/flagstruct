@@ -74,6 +74,62 @@ func (s *mapValue[T]) Type() string {
 	return fmt.Sprintf("map[string]%s", s.valueTypeName)
 }
 
+// from https://github.com/spf13/pflag/blob/master/string_slice.go
+type sliceValue[T any] struct {
+	value         *[]T
+	parser        func(s string) (T, error)
+	valueTypeName string
+	changed       bool
+}
+
+func newSliceValue[T any](val []T, p *[]T, valueTypeName string, parser func(s string) (T, error)) *sliceValue[T] {
+	if val == nil {
+		val = make([]T, 0)
+	}
+	*p = val
+	return &sliceValue[T]{
+		value:         p,
+		parser:        parser,
+		valueTypeName: valueTypeName,
+	}
+}
+
+func (s *sliceValue[T]) Set(val string) error {
+	if !s.changed {
+		*s.value = make([]T, 0)
+		s.changed = true
+	}
+
+	parts := strings.Split(val, ",")
+	for _, part := range parts {
+		part = strings.TrimSpace(part)
+		if part == "" {
+			continue
+		}
+		v, err := s.parser(part)
+		if err != nil {
+			return fmt.Errorf("value %q is not a valid %s", part, s.valueTypeName)
+		}
+		*s.value = append(*s.value, v)
+	}
+	return nil
+}
+
+func (s *sliceValue[T]) String() string {
+	if s == nil || s.value == nil {
+		return "[]"
+	}
+	parts := make([]string, len(*s.value))
+	for i, v := range *s.value {
+		parts[i] = fmt.Sprintf("%v", v)
+	}
+	return "[" + strings.Join(parts, ",") + "]"
+}
+
+func (s *sliceValue[T]) Type() string {
+	return fmt.Sprintf("[]%s", s.valueTypeName)
+}
+
 type Config struct {
 	HandlingMode flag.ErrorHandling
 
@@ -447,63 +503,108 @@ func (b *Binder) walkField(fs *flag.FlagSet, rt reflect.Type, fv reflect.Value, 
 		ref := (*uint)(unsafe.Pointer(fv.UnsafeAddr()))
 		fs.UintVarP(ref, c.fieldname, c.shorthand, uint(fv.Uint()), c.helpText)
 	case reflect.Slice:
-		switch rt.Elem().Kind() {
-		case reflect.Bool:
-			var defaultValue []bool
-			for i := 0; i < fv.Len(); i++ {
-				defaultValue = append(defaultValue, fv.Index(i).Bool())
-			}
-			ref := (*[]bool)(unsafe.Pointer(fv.UnsafeAddr()))
-			fs.BoolSliceVarP(ref, c.fieldname, c.shorthand, defaultValue, c.helpText)
-		case reflect.Float64:
-			var defaultValue []float64
-			for i := 0; i < fv.Len(); i++ {
-				defaultValue = append(defaultValue, fv.Index(i).Float())
-			}
-			ref := (*[]float64)(unsafe.Pointer(fv.UnsafeAddr()))
-			fs.Float64SliceVarP(ref, c.fieldname, c.shorthand, defaultValue, c.helpText)
-		case reflect.Int64:
-			switch rt.Elem() {
-			case rTimeDurationType:
-				ref := (*[]time.Duration)(unsafe.Pointer(fv.UnsafeAddr()))
-				var defaultValue []time.Duration
+		elemType := rt.Elem()
+		// special case for time.Duration which is an int64
+		if elemType == rTimeDurationType {
+			ref := (*[]time.Duration)(unsafe.Pointer(fv.UnsafeAddr()))
+			var defaultValue []time.Duration
+			if fv.Len() > 0 {
+				defaultValue = make([]time.Duration, fv.Len())
 				for i := 0; i < fv.Len(); i++ {
-					defaultValue = append(defaultValue, time.Duration(fv.Index(i).Int()))
+					defaultValue[i] = time.Duration(fv.Index(i).Int())
 				}
-				fs.DurationSliceVarP(ref, c.fieldname, c.shorthand, defaultValue, c.helpText)
-			default:
-				var defaultValue []int64
-				for i := 0; i < fv.Len(); i++ {
-					defaultValue = append(defaultValue, fv.Index(i).Int())
-				}
-				ref := (*[]int64)(unsafe.Pointer(fv.UnsafeAddr()))
-				fs.Int64SliceVarP(ref, c.fieldname, c.shorthand, defaultValue, c.helpText)
 			}
-		case reflect.Int:
-			var defaultValue []int
-			for i := 0; i < fv.Len(); i++ {
-				defaultValue = append(defaultValue, int(fv.Index(i).Int()))
-			}
-			ref := (*[]int)(unsafe.Pointer(fv.UnsafeAddr()))
-			fs.IntSliceVarP(ref, c.fieldname, c.shorthand, defaultValue, c.helpText)
-		case reflect.String:
-			var defaultValue []string
-			for i := 0; i < fv.Len(); i++ {
-				defaultValue = append(defaultValue, fv.Index(i).String())
-			}
-			ref := (*[]string)(unsafe.Pointer(fv.UnsafeAddr()))
-			fs.StringSliceVarP(ref, c.fieldname, c.shorthand, defaultValue, c.helpText)
-		case reflect.Uint:
-			var defaultValue []uint
-			for i := 0; i < fv.Len(); i++ {
-				defaultValue = append(defaultValue, uint(fv.Index(i).Uint()))
-			}
-			ref := (*[]uint)(unsafe.Pointer(fv.UnsafeAddr()))
-			fs.UintSliceVarP(ref, c.fieldname, c.shorthand, defaultValue, c.helpText)
-		// case reflect.Uint64:
-		default:
-			panic(fmt.Sprintf("unsupported slice type %v", rt))
+			fs.VarP(newSliceValue(defaultValue, ref, "time.Duration", time.ParseDuration), c.fieldname, c.shorthand, c.helpText)
+			return
 		}
+
+		switch elemType.Kind() {
+		case reflect.String:
+			ref := (*[]string)(unsafe.Pointer(fv.UnsafeAddr()))
+			var defaultValue []string
+			if fv.Len() > 0 {
+				defaultValue = make([]string, fv.Len())
+				for i := 0; i < fv.Len(); i++ {
+					defaultValue[i] = fv.Index(i).String()
+				}
+			}
+			fs.VarP(newSliceValue(defaultValue, ref, "string", func(s string) (string, error) { return s, nil }), c.fieldname, c.shorthand, c.helpText)
+			return
+		case reflect.Bool:
+			ref := (*[]bool)(unsafe.Pointer(fv.UnsafeAddr()))
+			var defaultValue []bool
+			if fv.Len() > 0 {
+				defaultValue = make([]bool, fv.Len())
+				for i := 0; i < fv.Len(); i++ {
+					defaultValue[i] = fv.Index(i).Bool()
+				}
+			}
+			fs.VarP(newSliceValue(defaultValue, ref, "bool", strconv.ParseBool), c.fieldname, c.shorthand, c.helpText)
+			return
+		case reflect.Int:
+			ref := (*[]int)(unsafe.Pointer(fv.UnsafeAddr()))
+			var defaultValue []int
+			if fv.Len() > 0 {
+				defaultValue = make([]int, fv.Len())
+				for i := 0; i < fv.Len(); i++ {
+					defaultValue[i] = int(fv.Index(i).Int())
+				}
+			}
+			fs.VarP(newSliceValue(defaultValue, ref, "int", strconv.Atoi), c.fieldname, c.shorthand, c.helpText)
+			return
+		case reflect.Int64:
+			ref := (*[]int64)(unsafe.Pointer(fv.UnsafeAddr()))
+			var defaultValue []int64
+			if fv.Len() > 0 {
+				defaultValue = make([]int64, fv.Len())
+				for i := 0; i < fv.Len(); i++ {
+					defaultValue[i] = fv.Index(i).Int()
+				}
+			}
+			parser := func(s string) (int64, error) { return strconv.ParseInt(s, 10, 64) }
+			fs.VarP(newSliceValue(defaultValue, ref, "int64", parser), c.fieldname, c.shorthand, c.helpText)
+			return
+		case reflect.Uint:
+			ref := (*[]uint)(unsafe.Pointer(fv.UnsafeAddr()))
+			var defaultValue []uint
+			if fv.Len() > 0 {
+				defaultValue = make([]uint, fv.Len())
+				for i := 0; i < fv.Len(); i++ {
+					defaultValue[i] = uint(fv.Index(i).Uint())
+				}
+			}
+			parser := func(s string) (uint, error) {
+				v, err := strconv.ParseUint(s, 10, 0)
+				return uint(v), err
+			}
+			fs.VarP(newSliceValue(defaultValue, ref, "uint", parser), c.fieldname, c.shorthand, c.helpText)
+			return
+		case reflect.Uint64:
+			ref := (*[]uint64)(unsafe.Pointer(fv.UnsafeAddr()))
+			var defaultValue []uint64
+			if fv.Len() > 0 {
+				defaultValue = make([]uint64, fv.Len())
+				for i := 0; i < fv.Len(); i++ {
+					defaultValue[i] = fv.Index(i).Uint()
+				}
+			}
+			parser := func(s string) (uint64, error) { return strconv.ParseUint(s, 10, 64) }
+			fs.VarP(newSliceValue(defaultValue, ref, "uint64", parser), c.fieldname, c.shorthand, c.helpText)
+			return
+		case reflect.Float64:
+			ref := (*[]float64)(unsafe.Pointer(fv.UnsafeAddr()))
+			var defaultValue []float64
+			if fv.Len() > 0 {
+				defaultValue = make([]float64, fv.Len())
+				for i := 0; i < fv.Len(); i++ {
+					defaultValue[i] = fv.Index(i).Float()
+				}
+			}
+			parser := func(s string) (float64, error) { return strconv.ParseFloat(s, 64) }
+			fs.VarP(newSliceValue(defaultValue, ref, "float64", parser), c.fieldname, c.shorthand, c.helpText)
+			return
+		}
+		fallthrough
 	case reflect.Map:
 		if rt.Key().Kind() == reflect.String {
 			elemType := rt.Elem()
